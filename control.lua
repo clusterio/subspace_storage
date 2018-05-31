@@ -247,6 +247,7 @@ function Reset()
 	global.rxControls = {}
 	global.txControls = {}
 	global.invControls = {}
+	global.txSignals = {}
 
 	AddAllEntitiesOfNames(
 	{
@@ -862,20 +863,26 @@ function HandleTXCombinators()
 	local frame = {}
 	for type,arr in pairs(signals) do
 		for name,count in pairs(arr) do
-			table.insert(frame,{count=count,name=name,type=type})
+			table.insert(frame, {count = count, name = name, type = type})
 		end
 	end
 
 	if #frame > 0 then
+		local signalStrings = {}
+
 		if global.worldID then
-			table.insert(frame,1,{count=global.worldID,name="signal-srcid",type="virtual"})
+			signalStrings[#signalStrings + 1] = "virtual".."\0".."signal-srcid".."\0"..tostring(global.worldID)
 		end
-		table.insert(frame,{count=game.tick,name="signal-srctick",type="virtual"})
-		game.write_file(TX_BUFFER_FILE, json:encode(frame).."\n", true, global.write_file_player or 0)
+		signalStrings[#signalStrings + 1] = "virtual".."\0".."signal-srctick".."\0"..tostring(game.tick)
 
-		-- Loopback for testing
-		--AddFrameToRXBuffer(frame)
+		for i = 1, #frame do
+			local signal = frame[i]
+			signalStrings[#signalStrings + 1] = signal.type.."\0"..signal.name.."\0"..tostring(signal.count)
+		end
 
+		signalStrings[#signalStrings + 1] = "\n"
+		
+		global.txSignals[#global.txSignals + 1] = table.concat(signalStrings, ";")
 	end
 end
 
@@ -894,11 +901,13 @@ function AreTablesSame(tableA, tableB)
 	
 	for keyA, valueA in pairs(tableA) do
 		local valueB = tableB[keyA]
-		if type(valueA) == "table" and type(valueB) == "table" then
+		local typeA = type(valueA)
+		local typeB = type(valueB)
+		if typeA == "table" and typeB == "table" then
 			if not AreTablesSame(valueA, valueB) then
 				return false
 			end
-		elseif type(valueA) ~= type(valueB) then
+		elseif typeA ~= typeB then
 			return false
 		elseif valueA ~= valueB then
 			return false
@@ -1024,6 +1033,10 @@ remote.add_interface("clusterio",
 	setWorldID = function(newid)
 		global.worldID = newid
 		UpdateInvCombinators()
+	end,
+	getTXSignals = function()
+		rcon.print(table.concat(global.txSignals))
+		global.txSignals = {}
 	end
 })
 
