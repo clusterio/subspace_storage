@@ -838,7 +838,7 @@ end
 function HandleTXCombinators()
 	-- Check all TX Combinators, and if condition satisfied, add frame to transmit buffer
 
-	-- frame = {{count=42,name="signal-grey",type="virtual"},{...},...}
+	local hasSignals = false
 	local signals = {["item"]={},["virtual"]={},["fluid"]={}}
 	for i,txControl in pairs(global.txControls) do
 		if txControl.valid then
@@ -848,6 +848,7 @@ function HandleTXCombinators()
 					local signalType = signal.signal.type
 					local signalName = signal.signal.name
 					signals[signalType][signalName] = (signals[signalType][signalName] or 0) + signal.count
+					hasSignals = true
 				end
 			end
 		end
@@ -860,27 +861,20 @@ function HandleTXCombinators()
 	end
 	global.oldTXSignals = signals
 
-	local frame = {}
-	for type,arr in pairs(signals) do
-		for name,count in pairs(arr) do
-			table.insert(frame, {count = count, name = name, type = type})
-		end
-	end
-
-	if #frame > 0 then
+	if hasSignals then
+		
 		local signalStrings = {}
-
+		
 		if global.worldID then
 			signalStrings[#signalStrings + 1] = "virtual".."\0".."signal-srcid".."\0"..tostring(global.worldID)
 		end
 		signalStrings[#signalStrings + 1] = "virtual".."\0".."signal-srctick".."\0"..tostring(game.tick)
-
-		for i = 1, #frame do
-			local signal = frame[i]
-			signalStrings[#signalStrings + 1] = signal.type.."\0"..signal.name.."\0"..tostring(signal.count)
+		
+		for type,arr in pairs(signals) do
+			for name,count in pairs(arr) do
+				signalStrings[#signalStrings + 1] = type.."\0"..name.."\0"..tostring(count)
+			end
 		end
-
-		signalStrings[#signalStrings + 1] = "\n"
 		
 		global.txSignals[#global.txSignals + 1] = table.concat(signalStrings, ";")
 	end
@@ -1035,7 +1029,7 @@ remote.add_interface("clusterio",
 		UpdateInvCombinators()
 	end,
 	getTXSignals = function()
-		rcon.print(table.concat(global.txSignals))
+		rcon.print(table.concat(global.txSignals, "\n"))
 		global.txSignals = {}
 	end
 })
