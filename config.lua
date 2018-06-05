@@ -36,6 +36,7 @@ ELECTRICITY_RATIO = 1000000 -- 1.000.000,  1 = 1MJ
 
 MAX_RX_BUFFER_SIZE = 40 -- slightly more than one second
 RX_COMBINATOR_NAME = "get-combinator"
+MAX_TX_BUFFER_SIZE = 60 -- at least 1 second of buffer
 TX_COMBINATOR_NAME = "put-combinator"
 INV_COMBINATOR_NAME = "inventory-combinator"
 

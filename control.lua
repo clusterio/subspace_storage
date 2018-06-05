@@ -248,6 +248,10 @@ function Reset()
 	global.txControls = {}
 	global.invControls = {}
 	global.txSignals = {}
+	--Need to start at 0 because the first add does + 1
+	--and the first index can't be null because otherwise
+	--table.concat will throw an error
+	global.txStorageIndex = 0
 
 	AddAllEntitiesOfNames(
 	{
@@ -876,7 +880,11 @@ function HandleTXCombinators()
 			end
 		end
 		
-		global.txSignals[#global.txSignals + 1] = table.concat(signalStrings, ";")
+		--Will override the oldest ticks signals if there isn't space for more.
+		--The limit is there because otherwise the content of this table could
+		--end up using a lot of memory.
+		global.txSignals[(global.txStorageIndex % MAX_TX_BUFFER_SIZE) + 1] = table.concat(signalStrings, ";")
+		global.txStorageIndex = global.txStorageIndex + 1
 	end
 end
 
@@ -1031,6 +1039,10 @@ remote.add_interface("clusterio",
 	getTXSignals = function()
 		rcon.print(table.concat(global.txSignals, "\n"))
 		global.txSignals = {}
+		--Need to start at 0 because the first add does + 1
+		--and the first index can't be null because otherwise
+		--table.concat will throw an error
+		global.txStorageIndex = 0
 	end
 })
 
