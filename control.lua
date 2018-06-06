@@ -248,6 +248,11 @@ function Reset()
   global.rxBuffer = {}
 	global.txControls = {}
 	global.invControls = {}
+	global.txSignals = {}
+	--Need to start at 0 because the first add does + 1
+	--and the first index can't be null because otherwise
+	--table.concat will throw an error
+	global.txStorageIndex = 0
 
 	AddAllEntitiesOfNames(
 	{
@@ -840,7 +845,7 @@ end
 function HandleTXCombinators()
 	-- Check all TX Combinators, and if condition satisfied, add frame to transmit buffer
 
-	-- frame = {{count=42,name="signal-grey",type="virtual"},{...},...}
+	local hasSignals = false
 	local signals = {["item"]={},["virtual"]={},["fluid"]={}}
 	for i,txControl in pairs(global.txControls) do
 		if txControl.valid then
@@ -850,6 +855,7 @@ function HandleTXCombinators()
 					local signalType = signal.signal.type
 					local signalName = signal.signal.name
 					signals[signalType][signalName] = (signals[signalType][signalName] or 0) + signal.count
+					hasSignals = true
 				end
 			end
 		end
@@ -862,23 +868,26 @@ function HandleTXCombinators()
 	end
 	global.oldTXSignals = signals
 
-	local frame = {}
-	for type,arr in pairs(signals) do
-		for name,count in pairs(arr) do
-			table.insert(frame,{count=count,name=name,type=type})
-		end
-	end
-
-	if #frame > 0 then
+	if hasSignals then
+		
+		local signalStrings = {}
+		
 		if global.worldID then
-			table.insert(frame,1,{count=global.worldID,name="signal-srcid",type="virtual"})
+			signalStrings[#signalStrings + 1] = "virtual".."\0".."signal-srcid".."\0"..tostring(global.worldID)
 		end
-		table.insert(frame,{count=game.tick,name="signal-srctick",type="virtual"})
-		game.write_file(TX_BUFFER_FILE, json:encode(frame).."\n", true, global.write_file_player or 0)
-
-		-- Loopback for testing
-		--AddFrameToRXBuffer(frame)
-
+		signalStrings[#signalStrings + 1] = "virtual".."\0".."signal-srctick".."\0"..tostring(game.tick)
+		
+		for type,arr in pairs(signals) do
+			for name,count in pairs(arr) do
+				signalStrings[#signalStrings + 1] = type.."\0"..name.."\0"..tostring(count)
+			end
+		end
+		
+		--Will override the oldest ticks signals if there isn't space for more.
+		--The limit is there because otherwise the content of this table could
+		--end up using a lot of memory.
+		global.txSignals[(global.txStorageIndex % MAX_TX_BUFFER_SIZE) + 1] = table.concat(signalStrings, ";")
+		global.txStorageIndex = global.txStorageIndex + 1
 	end
 end
 
@@ -897,11 +906,13 @@ function AreTablesSame(tableA, tableB)
 	
 	for keyA, valueA in pairs(tableA) do
 		local valueB = tableB[keyA]
-		if type(valueA) == "table" and type(valueB) == "table" then
+		local typeA = type(valueA)
+		local typeB = type(valueB)
+		if typeA == "table" and typeB == "table" then
 			if not AreTablesSame(valueA, valueB) then
 				return false
 			end
-		elseif type(valueA) ~= type(valueB) then
+		elseif typeA ~= typeB then
 			return false
 		elseif valueA ~= valueB then
 			return false
@@ -1027,6 +1038,14 @@ remote.add_interface("clusterio",
 	setWorldID = function(newid)
 		global.worldID = newid
 		UpdateInvCombinators()
+	end,
+	getTXSignals = function()
+		rcon.print(table.concat(global.txSignals, "\n"))
+		global.txSignals = {}
+		--Need to start at 0 because the first add does + 1
+		--and the first index can't be null because otherwise
+		--table.concat will throw an error
+		global.txStorageIndex = 0
 	end
 })
 
