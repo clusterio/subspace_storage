@@ -116,6 +116,54 @@ function NextLink(linkedList)
 	return toReturn
 end
 
+
+--[[
+--Tests all possible combinations of add/remove/iterate/reset eventually
+math.randomseed(4)
+
+while true do
+	local list = CreateDoublyLinkedList()
+	local thingsInlist = {}
+	local count = 0
+	local uniqueID = 0
+	local repeatCount = math.random(1, 20)
+	print("Restarted")
+	for i = 1, 100 do
+		local action = math.random(0, 4)
+		if     action == 0 then
+			for k = 1, math.random(1, repeatCount) do
+				local id = uniqueID
+				uniqueID = uniqueID + 1
+				AddLink(list, "x", id)
+				count = count + 1
+				table.insert(thingsInlist, id)
+				print("AddLink("..tostring(id)..")")
+			end
+		elseif action == 1 then
+			if count > 0 then
+				for k = 1, math.random(1, count) do
+					local index = math.random(1, count)
+					local vall = thingsInlist[index]
+					table.remove(thingsInlist, index)
+					count = count - 1
+					RemoveLink(list, vall)
+					print("RemoveLink("..tostring(vall)..")")
+				end
+			end
+		elseif action == 3 then
+			for k = 1, math.random(1, repeatCount) do
+				NextLink(list)
+				print("NextLink")
+			end
+		elseif action == 4 then
+			RestartIterator(list, 30)
+			print("Restarted in loop")
+		end
+	end
+end
+]]--
+
+
 --[[
 local list = CreateDoublyLinkedList()
 AddLink(list, 1, 1)
