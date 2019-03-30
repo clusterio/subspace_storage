@@ -497,9 +497,9 @@ function HandleInputTank(entityData)
 			if isFluidLegal(fluid.name) then
 				AddItemToInputList(fluid.name, math.floor(fluid.amount))
 				fluid.amount = fluid.amount - math.floor(fluid.amount)
+				fluidbox[1] = fluid
 			end
 		end
-		fluidbox[1] = fluid
 	end
 end
 
