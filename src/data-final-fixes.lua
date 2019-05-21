@@ -17,7 +17,7 @@ for k,v in pairs(data.raw.fluid) do
 			ingredients = {},
 			results=
 			{
-				{type="fluid", name=v.name, amount=-1}
+				{type="fluid", name=v.name, amount=0}
 			}
 		}
 	})
