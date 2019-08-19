@@ -341,30 +341,6 @@ data:extend{
 	},
 	{
 		type = "virtual-signal",
-		name = "signal-srctick",
-		icon = "__clusterio__/graphics/icons/signal_srctick.png",
-		icon_size = 32,
-		subgroup = "virtual-signal-clusterio",
-		order = "e[clusterio]-[1srctick]"
-	},
-	{
-		type = "virtual-signal",
-		name = "signal-srcid",
-		icon = "__clusterio__/graphics/icons/signal_srcid.png",
-		icon_size = 32,
-		subgroup = "virtual-signal-clusterio",
-		order = "e[clusterio]-[2srcid]"
-	},
-	{
-		type = "virtual-signal",
-		name = "signal-dstid",
-		icon = "__clusterio__/graphics/icons/signal_dstid.png",
-		icon_size = 32,
-		subgroup = "virtual-signal-clusterio",
-		order = "e[clusterio]-[3dstid]"
-	},
-	{
-		type = "virtual-signal",
 		name = "signal-localid",
 		icon = "__clusterio__/graphics/icons/signal_localid.png",
 		icon_size = 32,
@@ -378,6 +354,14 @@ data:extend{
 		icon_size = 32,
 		subgroup = "virtual-signal-clusterio",
 		order = "e[clusterio]-[5unixtime]"
+	},
+	{
+		type = "virtual-signal",
+		name = "electricity",
+		icon = "__clusterio__/graphics/icons/signal_unixtime.png",
+		icon_size = 32,
+		subgroup = "virtual-signal-clusterio",
+		order = "e[clusterio]-[5electricity]"
 	},
 }
 
