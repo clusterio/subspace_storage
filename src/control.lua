@@ -265,8 +265,6 @@ function Reset()
 end
 
 script.on_event(defines.events.on_tick, function(event)
-	-- TX Combinators must run every tick to catch single pulses
-	HandleTXCombinators()
 
 	--If the mod isn't connected then still pretend that it's
 	--so items requests and removals can be fulfilled
@@ -342,9 +340,6 @@ script.on_event(defines.events.on_tick, function(event)
 		global.isConnected = false
 	end
 	global.prevIsConnected = global.isConnected
-
-	-- RX Combinators are set and then cleared on sequential ticks to create pulses
-	UpdateRXCombinators()
 end)
 
 function UpdateUseableStorage()
