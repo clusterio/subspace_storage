@@ -4,3 +4,7 @@ Version: 1.16.0
     - Added electricity signal for inventory combinator.
     - Removed the broken tx and rx combinators.
     - Removed bundled lua json lib and switched over to using the builtin json functions.
+  Modding:
+    - Added getWorldID remote interface.
+    - Added on_world_id_changed custom events for other mods to listen to.
+    - Added events remote interface returning a table of events this mod raises.

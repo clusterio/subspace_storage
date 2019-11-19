@@ -1,3 +1,4 @@
+require("util")
 require("config")
 require("mod-gui")
 require("LinkedList")
@@ -158,6 +159,15 @@ end)
 script.on_event(defines.events.on_pre_player_mined_item, function(event)
 	OnKilledEntity(event)
 end)
+
+
+---------------------
+--[[Custom events]]--
+---------------------
+local customEvents = {
+	-- Contains the worldID attribute with the new id
+	on_world_id_changed = script.generate_event_name(),
+}
 
 
 ------------------------------
@@ -892,9 +902,21 @@ remote.add_interface("clusterio",
 		UpdateInvCombinators()
 	end,
 	setWorldID = function(newid)
+		if global.worldID == newid then
+			return
+		end
 		global.worldID = newid
 		UpdateInvCombinators()
-	end
+		script.raise_event(customEvents.on_world_id_changed, { worldID = newid })
+	end,
+	-- Note: the world id is nil at the start of a new game and can change
+	--       for example when an instance save is moved to another instance.
+	getWorldID = function()
+		return global.worldID
+	end,
+	events = function()
+		return table.deepcopy(customEvents)
+	end,
 })
 
 commands.add_command("ccri", "clusterio internal command, receive Inventory", function(event)
@@ -1188,4 +1210,3 @@ script.on_event(defines.events.on_player_died,function(event)
 	--if event.cause~=nil then if event.cause.name~="locomotive" then return end msg=msg.." by "..event.cause.name else msg=msg.."." end
 	game.write_file("alerts.txt","player_died, "..game.players[event.player_index].name.." has been killed by "..(event.cause or {name="unknown"}).name,true)
 end)
---script.on_load(function() commands.add_command("ccri","clusterio internal command",function(x) game.print(x.test) end ) end)
