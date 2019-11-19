@@ -97,11 +97,6 @@ function AddEntity(entity)
 		}, entity.unit_number)
 		--previous version made then inactive which isn't desired anymore
 		entity.active = true
-	elseif entity.name == TX_COMBINATOR_NAME then
-		global.txControls[entity.unit_number] = entity.get_or_create_control_behavior()
-	elseif entity.name == RX_COMBINATOR_NAME then
-		global.rxControls[entity.unit_number] = entity.get_or_create_control_behavior()
-		entity.operable=false
 	elseif entity.name == INV_COMBINATOR_NAME then
 		global.invControls[entity.unit_number] = entity.get_or_create_control_behavior()
 		entity.operable=false
@@ -127,10 +122,6 @@ function OnKilledEntity(event)
 			RemoveLink(global.inputTanksData.entitiesData, entity.unit_number)
 		elseif entity.name == OUTPUT_TANK_NAME then
 			RemoveLink(global.outputTanksData.entitiesData, entity.unit_number)
-		elseif entity.name == TX_COMBINATOR_NAME then
-			global.txControls[entity.unit_number] = nil
-		elseif entity.name == RX_COMBINATOR_NAME then
-			global.rxControls[entity.unit_number] = nil
 		elseif entity.name == INV_COMBINATOR_NAME then
 			global.invControls[entity.unit_number] = nil
 		elseif entity.name == INPUT_ELECTRICITY_NAME then
@@ -245,9 +236,6 @@ function Reset()
 	global.lastElectricityUpdate = 0
 	global.maxElectricity = 100000000000000 / ELECTRICITY_RATIO --100TJ assuming a ratio of 1.000.000
 
-	global.rxControls = {}
-  global.rxBuffer = {}
-	global.txControls = {}
 	global.invControls = {}
 
 	AddAllEntitiesOfNames(
@@ -256,8 +244,6 @@ function Reset()
 		OUTPUT_CHEST_NAME,
 		INPUT_TANK_NAME,
 		OUTPUT_TANK_NAME,
-		RX_COMBINATOR_NAME,
-		TX_COMBINATOR_NAME,
 		INV_COMBINATOR_NAME,
 		INPUT_ELECTRICITY_NAME,
 		OUTPUT_ELECTRICITY_NAME
@@ -894,20 +880,6 @@ remote.add_interface("clusterio",
 		game.print(items)
 	end,
 	reset = Reset,
-	receiveFrame = function(jsonframe)
-		local frame = json:decode(jsonframe)
-		-- frame = {tick=123456,frame={{count=42,name="signal-grey",type="virtual"},{...},...}}
-		return AddFrameToRXBuffer(frame)
-	end,
-	receiveMany = function(jsonframes)
-		local frames = json:decode(jsonframes)
-		local buffer
-		for _,frame in pairs(frames) do
-			buffer = AddFrameToRXBuffer(frame)
-			if buffer==0 then return 0 end
-		end
-		return buffer
-	end,
 	setFilePlayer = function(i)
 		global.write_file_player = i
 	end,
