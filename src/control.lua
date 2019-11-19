@@ -1,7 +1,6 @@
 require("config")
 require("mod-gui")
 require("LinkedList")
-local json = require("json")
 
 ------------------------------------------------------------
 --[[Method that handle creation and deletion of entities]]--
@@ -764,7 +763,7 @@ function ExportItemFlows()
 		}
 	end
 
-	game.write_file(FLOWS_FILE, json:encode(flowreport).."\n", true, global.write_file_player or 0)
+	game.write_file(FLOWS_FILE, game.table_to_json(flowreport).."\n", true, global.write_file_player or 0)
 end
 
 function ExportFluidFlows()
@@ -777,7 +776,7 @@ function ExportFluidFlows()
 		}
 	end
 
-	game.write_file(FLOWS_FILE, json:encode(flowreport).."\n", true, global.write_file_player or 0)
+	game.write_file(FLOWS_FILE, game.table_to_json(flowreport).."\n", true, global.write_file_player or 0)
 end
 
 
@@ -865,7 +864,7 @@ remote.add_interface("clusterio",
 		GiveItemsToStorage(itemName, itemCount)
 	end,
 	importMany = function(jsonString)
-		local items = json:decode(jsonString)
+		local items = game.json_to_table(jsonString)
 		for k, item in pairs(items) do
 			for itemName, itemCount in pairs(item) do
 				GiveItemsToStorage(itemName, itemCount)
@@ -885,7 +884,7 @@ remote.add_interface("clusterio",
 	end,
 	receiveInventory = function(jsoninvdata)
 		global.ticksSinceMasterPinged = 0
-		local invdata = json:decode(jsoninvdata)
+		local invdata = game.json_to_table(jsoninvdata)
 		for name,count in pairs(invdata) do
 			global.invdata[name]=count
 		end
