@@ -358,7 +358,7 @@ data:extend{
 	{
 		type = "virtual-signal",
 		name = "electricity",
-		icon = "__clusterio__/graphics/icons/signal_unixtime.png",
+		icon = "__clusterio__/graphics/icons/signal_electricity.png",
 		icon_size = 32,
 		subgroup = "virtual-signal-clusterio",
 		order = "e[clusterio]-[5electricity]"
