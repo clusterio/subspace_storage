@@ -39,3 +39,9 @@ luac.out
 *.x86_64
 *.hex
 
+# Build files
+dist/
+
+# npm package manager
+node_modules/
+package-lock.json

@@ -1,11 +1,10 @@
-
 {
-"name": "clusterio",
-"title": "Clusterio",
-"version": "1.15.0",
-"date": "25-06-2018",
-"author": "Danielv123 & Keyboardhack & justarandomgeek & AreYouScared & psihius & Godmave",
-"dependencies": ["base >= 0.13"],
-"factorio_version": "0.17",
-"description": "Allows transfer of items, fluids, research and signals between servers. *Server owners, see https://github.com/Danielv123/factorioClusterio for installation instructions*"
+    "name": "clusterio",
+    "version": "1.16.0",
+    "title": "Clusterio",
+    "author": "Danielv123 & Keyboardhack & justarandomgeek & AreYouScared & psihius & Godmave",
+    "contact": "danielv@live.no",
+    "homepage": "https://github.com/Danielv123/factorioClusterio",
+    "description": "Allows transfer of items, fluids, research and signals between servers. *Server owners, see https://github.com/Danielv123/factorioClusterio for installation instructions*",
+    "factorio_version": "0.17"
 }
