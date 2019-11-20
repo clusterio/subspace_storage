@@ -316,12 +316,6 @@ script.on_event(defines.events.on_tick, function(event)
 			global.workTick = global.workTick + 1
 		elseif global.workTick == TICKS_TO_COLLECT_REQUESTS + TICKS_TO_FULFILL_REQUESTS + 1 then
 			ExportOutputList()
-			global.workTick = global.workTick + 1
-		elseif global.workTick == TICKS_TO_COLLECT_REQUESTS + TICKS_TO_FULFILL_REQUESTS + 2 then
-			ExportFluidFlows()
-			global.workTick = global.workTick + 1
-		elseif global.workTick == TICKS_TO_COLLECT_REQUESTS + TICKS_TO_FULFILL_REQUESTS + 3 then
-			ExportItemFlows()
 
 			--Restart loop
 			global.workTick = 0
@@ -761,32 +755,6 @@ function ExportOutputList()
 		--instead of doing it with the .. operator
 		game.write_file(ORDER_FILE, table.concat(exportStrings), true, global.write_file_player or 0)
 	end
-end
-
-function ExportItemFlows()
-	local flowreport = {type="item",flows={}}
-
-	for _,force in pairs(game.forces) do
-		flowreport.flows[force.name] = {
-			input_counts = force.item_production_statistics.input_counts,
-			output_counts = force.item_production_statistics.output_counts,
-		}
-	end
-
-	game.write_file(FLOWS_FILE, game.table_to_json(flowreport).."\n", true, global.write_file_player or 0)
-end
-
-function ExportFluidFlows()
-	local flowreport = {type="fluid",flows={}}
-
-	for _,force in pairs(game.forces) do
-		flowreport.flows[force.name] = {
-			input_counts = force.fluid_production_statistics.input_counts,
-			output_counts = force.fluid_production_statistics.output_counts,
-		}
-	end
-
-	game.write_file(FLOWS_FILE, game.table_to_json(flowreport).."\n", true, global.write_file_player or 0)
 end
 
 

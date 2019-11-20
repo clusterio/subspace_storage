@@ -40,7 +40,6 @@ INV_COMBINATOR_NAME = "inventory-combinator"
 
 OUTPUT_FILE = "output.txt"
 ORDER_FILE  = "orders.txt"
-FLOWS_FILE = "flows.txt"
 
 MAX_FLUID_AMOUNT = 25000
 TICKS_TO_COLLECT_REQUESTS = 40
