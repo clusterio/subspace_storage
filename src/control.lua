@@ -1,7 +1,7 @@
+require("util")
 require("config")
 require("mod-gui")
 require("LinkedList")
-local json = require("json")
 
 ------------------------------------------------------------
 --[[Method that handle creation and deletion of entities]]--
@@ -97,11 +97,6 @@ function AddEntity(entity)
 		}, entity.unit_number)
 		--previous version made then inactive which isn't desired anymore
 		entity.active = true
-	elseif entity.name == TX_COMBINATOR_NAME then
-		global.txControls[entity.unit_number] = entity.get_or_create_control_behavior()
-	elseif entity.name == RX_COMBINATOR_NAME then
-		global.rxControls[entity.unit_number] = entity.get_or_create_control_behavior()
-		entity.operable=false
 	elseif entity.name == INV_COMBINATOR_NAME then
 		global.invControls[entity.unit_number] = entity.get_or_create_control_behavior()
 		entity.operable=false
@@ -127,10 +122,6 @@ function OnKilledEntity(event)
 			RemoveLink(global.inputTanksData.entitiesData, entity.unit_number)
 		elseif entity.name == OUTPUT_TANK_NAME then
 			RemoveLink(global.outputTanksData.entitiesData, entity.unit_number)
-		elseif entity.name == TX_COMBINATOR_NAME then
-			global.txControls[entity.unit_number] = nil
-		elseif entity.name == RX_COMBINATOR_NAME then
-			global.rxControls[entity.unit_number] = nil
 		elseif entity.name == INV_COMBINATOR_NAME then
 			global.invControls[entity.unit_number] = nil
 		elseif entity.name == INPUT_ELECTRICITY_NAME then
@@ -168,6 +159,15 @@ end)
 script.on_event(defines.events.on_pre_player_mined_item, function(event)
 	OnKilledEntity(event)
 end)
+
+
+---------------------
+--[[Custom events]]--
+---------------------
+local customEvents = {
+	-- Contains the worldID attribute with the new id
+	on_world_id_changed = script.generate_event_name(),
+}
 
 
 ------------------------------
@@ -245,9 +245,6 @@ function Reset()
 	global.lastElectricityUpdate = 0
 	global.maxElectricity = 100000000000000 / ELECTRICITY_RATIO --100TJ assuming a ratio of 1.000.000
 
-	global.rxControls = {}
-  global.rxBuffer = {}
-	global.txControls = {}
 	global.invControls = {}
 
 	AddAllEntitiesOfNames(
@@ -256,8 +253,6 @@ function Reset()
 		OUTPUT_CHEST_NAME,
 		INPUT_TANK_NAME,
 		OUTPUT_TANK_NAME,
-		RX_COMBINATOR_NAME,
-		TX_COMBINATOR_NAME,
 		INV_COMBINATOR_NAME,
 		INPUT_ELECTRICITY_NAME,
 		OUTPUT_ELECTRICITY_NAME
@@ -321,12 +316,6 @@ script.on_event(defines.events.on_tick, function(event)
 			global.workTick = global.workTick + 1
 		elseif global.workTick == TICKS_TO_COLLECT_REQUESTS + TICKS_TO_FULFILL_REQUESTS + 1 then
 			ExportOutputList()
-			global.workTick = global.workTick + 1
-		elseif global.workTick == TICKS_TO_COLLECT_REQUESTS + TICKS_TO_FULFILL_REQUESTS + 2 then
-			ExportFluidFlows()
-			global.workTick = global.workTick + 1
-		elseif global.workTick == TICKS_TO_COLLECT_REQUESTS + TICKS_TO_FULFILL_REQUESTS + 3 then
-			ExportItemFlows()
 
 			--Restart loop
 			global.workTick = 0
@@ -768,32 +757,6 @@ function ExportOutputList()
 	end
 end
 
-function ExportItemFlows()
-	local flowreport = {type="item",flows={}}
-
-	for _,force in pairs(game.forces) do
-		flowreport.flows[force.name] = {
-			input_counts = force.item_production_statistics.input_counts,
-			output_counts = force.item_production_statistics.output_counts,
-		}
-	end
-
-	game.write_file(FLOWS_FILE, json:encode(flowreport).."\n", true, global.write_file_player or 0)
-end
-
-function ExportFluidFlows()
-	local flowreport = {type="fluid",flows={}}
-
-	for _,force in pairs(game.forces) do
-		flowreport.flows[force.name] = {
-			input_counts = force.fluid_production_statistics.input_counts,
-			output_counts = force.fluid_production_statistics.output_counts,
-		}
-	end
-
-	game.write_file(FLOWS_FILE, json:encode(flowreport).."\n", true, global.write_file_player or 0)
-end
-
 
 ---------------------------------
 --[[Update combinator methods]]--
@@ -879,7 +842,7 @@ remote.add_interface("clusterio",
 		GiveItemsToStorage(itemName, itemCount)
 	end,
 	importMany = function(jsonString)
-		local items = json:decode(jsonString)
+		local items = game.json_to_table(jsonString)
 		for k, item in pairs(items) do
 			for itemName, itemCount in pairs(item) do
 				GiveItemsToStorage(itemName, itemCount)
@@ -894,26 +857,12 @@ remote.add_interface("clusterio",
 		game.print(items)
 	end,
 	reset = Reset,
-	receiveFrame = function(jsonframe)
-		local frame = json:decode(jsonframe)
-		-- frame = {tick=123456,frame={{count=42,name="signal-grey",type="virtual"},{...},...}}
-		return AddFrameToRXBuffer(frame)
-	end,
-	receiveMany = function(jsonframes)
-		local frames = json:decode(jsonframes)
-		local buffer
-		for _,frame in pairs(frames) do
-			buffer = AddFrameToRXBuffer(frame)
-			if buffer==0 then return 0 end
-		end
-		return buffer
-	end,
 	setFilePlayer = function(i)
 		global.write_file_player = i
 	end,
 	receiveInventory = function(jsoninvdata)
 		global.ticksSinceMasterPinged = 0
-		local invdata = json:decode(jsoninvdata)
+		local invdata = game.json_to_table(jsoninvdata)
 		for name,count in pairs(invdata) do
 			global.invdata[name]=count
 		end
@@ -921,9 +870,21 @@ remote.add_interface("clusterio",
 		UpdateInvCombinators()
 	end,
 	setWorldID = function(newid)
+		if global.worldID == newid then
+			return
+		end
 		global.worldID = newid
 		UpdateInvCombinators()
-	end
+		script.raise_event(customEvents.on_world_id_changed, { worldID = newid })
+	end,
+	-- Note: the world id is nil at the start of a new game and can change
+	--       for example when an instance save is moved to another instance.
+	getWorldID = function()
+		return global.worldID
+	end,
+	events = function()
+		return table.deepcopy(customEvents)
+	end,
 })
 
 commands.add_command("ccri", "clusterio internal command, receive Inventory", function(event)
@@ -1217,4 +1178,3 @@ script.on_event(defines.events.on_player_died,function(event)
 	--if event.cause~=nil then if event.cause.name~="locomotive" then return end msg=msg.." by "..event.cause.name else msg=msg.."." end
 	game.write_file("alerts.txt","player_died, "..game.players[event.player_index].name.." has been killed by "..(event.cause or {name="unknown"}).name,true)
 end)
---script.on_load(function() commands.add_command("ccri","clusterio internal command",function(x) game.print(x.test) end ) end)

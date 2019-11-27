@@ -36,15 +36,10 @@ OUTPUT_ELECTRICITY_ICON_PATH = nil
 ELECTRICITY_ITEM_NAME = "electricity"
 ELECTRICITY_RATIO = 1000000 -- 1.000.000,  1 = 1MJ
 
-MAX_RX_BUFFER_SIZE = 40 -- slightly more than one second
-RX_COMBINATOR_NAME = "get-combinator"
-TX_COMBINATOR_NAME = "put-combinator"
 INV_COMBINATOR_NAME = "inventory-combinator"
 
 OUTPUT_FILE = "output.txt"
 ORDER_FILE  = "orders.txt"
-TX_BUFFER_FILE = "txbuffer.txt"
-FLOWS_FILE = "flows.txt"
 
 MAX_FLUID_AMOUNT = 25000
 TICKS_TO_COLLECT_REQUESTS = 40
