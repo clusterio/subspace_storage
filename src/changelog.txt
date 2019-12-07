@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------------------------------
 Version: 1.16.0
+Date: 08. 12. 2019
   Changes:
     - Added electricity signal for inventory combinator.
     - Removed the broken tx and rx combinators.
