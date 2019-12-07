@@ -46,8 +46,11 @@ async function main() {
 			let walker = klaw(args.sourceDir)
 				.on('data', item => {
 					if (item.stats.isFile()) {
-						let zipPath = path.join(modName, path.relative(args.sourceDir, item.path));
-						zip.file(zipPath, fs.createReadStream(item.path));
+						// On Windows the path created uses backslashes as the directory sepparator
+						// but the zip file needs to use forward slashes.  We can't use the posix
+						// version of relative here as it doesn't work with Windows style paths.
+						let basePath = path.relative(args.sourceDir, item.path).replace(/\\/g, "/");
+						zip.file(path.posix.join(modName, basePath), fs.createReadStream(item.path));
 					}
 				});
 			await events.once(walker, 'end');
