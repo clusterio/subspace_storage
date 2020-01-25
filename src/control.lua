@@ -1,7 +1,7 @@
+require("util")
 require("config")
 require("mod-gui")
 require("LinkedList")
-local json = require("json")
 
 ------------------------------------------------------------
 --[[Method that handle creation and deletion of entities]]--
@@ -25,8 +25,9 @@ function OnBuiltEntity(event)
 	local name = entity.name
 	if name == "entity-ghost" then name = entity.ghost_name end
 
-	if ENTITY_TELEPORTATION_RESTRICTION and global.config.PlacableArea>0 and (name == INPUT_CHEST_NAME or name == OUTPUT_CHEST_NAME or name == INPUT_TANK_NAME or name == OUTPUT_TANK_NAME) then
-		if (x < global.config.PlacableArea and x > 0-global.config.PlacableArea and y < global.config.PlacableArea and y > 0-global.config.PlacableArea) then
+	if ENTITY_TELEPORTATION_RESTRICTION and (name == INPUT_CHEST_NAME or name == OUTPUT_CHEST_NAME or name == INPUT_TANK_NAME or name == OUTPUT_TANK_NAME) then
+		if ((global.config.PlacableAreaX == 0 or (x < global.config.PlacableAreaX and x > 0-global.config.PlacableAreaX)) and
+		    (global.config.PlacableAreaY == 0 or (y < global.config.PlacableAreaY and y > 0-global.config.PlacableAreaY))) then
 			--only add entities that are not ghosts
 			if entity.type ~= "entity-ghost" then
 				AddEntity(entity)
@@ -34,7 +35,7 @@ function OnBuiltEntity(event)
 		else
 			if player and player.valid then
 				-- Tell the player what is happening
-				if player then player.print("Attempted placing entity outside allowed area (placed at x "..x.." y "..y.." out of allowed "..global.config.PlacableArea..")") end
+				if player then player.print("Attempted placing entity outside allowed area (placed at x "..x.." y "..y.." out of allowed "..(global.config.PlacableAreaX > 0 and global.config.PlacableAreaX or "none").. "x"..(global.config.PlacableAreaY > 0 and global.config.PlacableAreaY or "none")..")") end
 				-- kill entity, try to give it back to the player though
 				if not player.mine_entity(entity, true) then
 					entity.destroy()
@@ -97,11 +98,6 @@ function AddEntity(entity)
 		}, entity.unit_number)
 		--previous version made then inactive which isn't desired anymore
 		entity.active = true
-	elseif entity.name == TX_COMBINATOR_NAME then
-		global.txControls[entity.unit_number] = entity.get_or_create_control_behavior()
-	elseif entity.name == RX_COMBINATOR_NAME then
-		global.rxControls[entity.unit_number] = entity.get_or_create_control_behavior()
-		entity.operable=false
 	elseif entity.name == INV_COMBINATOR_NAME then
 		global.invControls[entity.unit_number] = entity.get_or_create_control_behavior()
 		entity.operable=false
@@ -127,10 +123,6 @@ function OnKilledEntity(event)
 			RemoveLink(global.inputTanksData.entitiesData, entity.unit_number)
 		elseif entity.name == OUTPUT_TANK_NAME then
 			RemoveLink(global.outputTanksData.entitiesData, entity.unit_number)
-		elseif entity.name == TX_COMBINATOR_NAME then
-			global.txControls[entity.unit_number] = nil
-		elseif entity.name == RX_COMBINATOR_NAME then
-			global.rxControls[entity.unit_number] = nil
 		elseif entity.name == INV_COMBINATOR_NAME then
 			global.invControls[entity.unit_number] = nil
 		elseif entity.name == INPUT_ELECTRICITY_NAME then
@@ -170,6 +162,15 @@ script.on_event(defines.events.on_pre_player_mined_item, function(event)
 end)
 
 
+---------------------
+--[[Custom events]]--
+---------------------
+local customEvents = {
+	-- Contains the worldID attribute with the new id
+	on_world_id_changed = script.generate_event_name(),
+}
+
+
 ------------------------------
 --[[Thing resetting events]]--
 ------------------------------
@@ -198,11 +199,18 @@ function Reset()
 			item_is_whitelist = false,
 			BWfluids = {},
 			fluid_is_whitelist = false,
-			PlacableArea = 200
+			PlacableAreaX = 200,
+			PlacableAreaY = 200
 		}
 	end
 	if global.invdata == nil then
 		global.invdata = {}
+	end
+	-- Migrate from PlacableArea to PlacableAreaX and PlacableAreaY
+	if not global.config.PlacableAreaX then
+		global.config.PlacableAreaX = global.config.PlacableArea
+		global.config.PlacableAreaY = global.config.PlacableArea
+		global.config.PlacableArea = nil
 	end
 
 	global.outputList = {}
@@ -245,9 +253,6 @@ function Reset()
 	global.lastElectricityUpdate = 0
 	global.maxElectricity = 100000000000000 / ELECTRICITY_RATIO --100TJ assuming a ratio of 1.000.000
 
-	global.rxControls = {}
-  global.rxBuffer = {}
-	global.txControls = {}
 	global.invControls = {}
 
 	AddAllEntitiesOfNames(
@@ -256,8 +261,6 @@ function Reset()
 		OUTPUT_CHEST_NAME,
 		INPUT_TANK_NAME,
 		OUTPUT_TANK_NAME,
-		RX_COMBINATOR_NAME,
-		TX_COMBINATOR_NAME,
 		INV_COMBINATOR_NAME,
 		INPUT_ELECTRICITY_NAME,
 		OUTPUT_ELECTRICITY_NAME
@@ -265,8 +268,6 @@ function Reset()
 end
 
 script.on_event(defines.events.on_tick, function(event)
-	-- TX Combinators must run every tick to catch single pulses
-	HandleTXCombinators()
 
 	--If the mod isn't connected then still pretend that it's
 	--so items requests and removals can be fulfilled
@@ -323,12 +324,6 @@ script.on_event(defines.events.on_tick, function(event)
 			global.workTick = global.workTick + 1
 		elseif global.workTick == TICKS_TO_COLLECT_REQUESTS + TICKS_TO_FULFILL_REQUESTS + 1 then
 			ExportOutputList()
-			global.workTick = global.workTick + 1
-		elseif global.workTick == TICKS_TO_COLLECT_REQUESTS + TICKS_TO_FULFILL_REQUESTS + 2 then
-			ExportFluidFlows()
-			global.workTick = global.workTick + 1
-		elseif global.workTick == TICKS_TO_COLLECT_REQUESTS + TICKS_TO_FULFILL_REQUESTS + 3 then
-			ExportItemFlows()
 
 			--Restart loop
 			global.workTick = 0
@@ -342,9 +337,6 @@ script.on_event(defines.events.on_tick, function(event)
 		global.isConnected = false
 	end
 	global.prevIsConnected = global.isConnected
-
-	-- RX Combinators are set and then cleared on sequential ticks to create pulses
-	UpdateRXCombinators()
 end)
 
 function UpdateUseableStorage()
@@ -495,11 +487,14 @@ function HandleInputTank(entityData)
 		local fluid = fluidbox[1]
 		if fluid ~= nil and math.floor(fluid.amount) > 0 then
 			if isFluidLegal(fluid.name) then
-				AddItemToInputList(fluid.name, math.floor(fluid.amount))
-				fluid.amount = fluid.amount - math.floor(fluid.amount)
+				local fluid_left = fluid.amount - math.floor(fluid.amount)
+				if fluid_left > 0 then
+					AddItemToInputList(fluid.name, math.floor(fluid.amount))
+					fluid.amount = fluid_left
+					fluidbox[1] = fluid
+				end
 			end
 		end
-		fluidbox[1] = fluid
 	end
 end
 
@@ -770,118 +765,10 @@ function ExportOutputList()
 	end
 end
 
-function ExportItemFlows()
-	local flowreport = {type="item",flows={}}
-
-	for _,force in pairs(game.forces) do
-		flowreport.flows[force.name] = {
-			input_counts = force.item_production_statistics.input_counts,
-			output_counts = force.item_production_statistics.output_counts,
-		}
-	end
-
-	game.write_file(FLOWS_FILE, json:encode(flowreport).."\n", true, global.write_file_player or 0)
-end
-
-function ExportFluidFlows()
-	local flowreport = {type="fluid",flows={}}
-
-	for _,force in pairs(game.forces) do
-		flowreport.flows[force.name] = {
-			input_counts = force.fluid_production_statistics.input_counts,
-			output_counts = force.fluid_production_statistics.output_counts,
-		}
-	end
-
-	game.write_file(FLOWS_FILE, json:encode(flowreport).."\n", true, global.write_file_player or 0)
-end
-
 
 ---------------------------------
 --[[Update combinator methods]]--
 ---------------------------------
-local validsignals
-function AddFrameToRXBuffer(frame)
-  if not validsignals then
-    validsignals = {
-      ["virtual"] = game.virtual_signal_prototypes,
-      ["fluid"]	 = game.fluid_prototypes,
-      ["item"]		= game.item_prototypes
-    }
-  end
-  -- Add a frame to the buffer. return remaining space in buffer
-
-
-	-- if buffer is full, drop frame
-	if #global.rxBuffer >= MAX_RX_BUFFER_SIZE then return 0 end
-
-	-- frame = {{count=42,name="signal-grey",type="virtual"},{...},...}
-	local signals = {}
-	local index = 1
-
-	for _,signal in pairs(frame) do
-		if validsignals[signal.type] and validsignals[signal.type][signal.name] then
-			signals[index] =
-				{
-					index=index,
-					count=signal.count,
-					signal={ name=signal.name, type=signal.type }
-				}
-			index = index + 1
-			--TODO: break if too many?
-			--TODO: error token on mismatched signals? maybe mismatch1-n signals?
-		end
-	end
-
-	if index > 1 then table.insert(global.rxBuffer,signals) end
-
-	return MAX_RX_BUFFER_SIZE - #global.rxBuffer
-end
-
-function HandleTXCombinators()
-	-- Check all TX Combinators, and if condition satisfied, add frame to transmit buffer
-
-	-- frame = {{count=42,name="signal-grey",type="virtual"},{...},...}
-	local signals = {["item"]={},["virtual"]={},["fluid"]={}}
-	for i,txControl in pairs(global.txControls) do
-		if txControl.valid then
-			local frame = txControl.signals_last_tick
-			if frame then
-				for _,signal in pairs(frame) do
-					local signalType = signal.signal.type
-					local signalName = signal.signal.name
-					signals[signalType][signalName] = (signals[signalType][signalName] or 0) + signal.count
-				end
-			end
-		end
-	end
-	
-	--Don't send the exact same signals in a row
-	if AreTablesSame(global.oldTXSignals, signals) then
-		global.oldTXSignals = signals
-		return
-	end
-	global.oldTXSignals = signals
-
-	local frame = {}
-	for type,arr in pairs(signals) do
-		for name,count in pairs(arr) do
-			table.insert(frame,{count=count,name=name,type=type})
-		end
-	end
-
-	if #frame > 0 then
-		if global.worldID then
-			table.insert(frame,1,{count=global.worldID,name="signal-srcid",type="virtual"})
-		end
-		table.insert(frame,{count=game.tick,name="signal-srctick",type="virtual"})
-		game.write_file(TX_BUFFER_FILE, json:encode(frame).."\n", true, global.write_file_player or 0)
-
-		-- Loopback for testing
-		--AddFrameToRXBuffer(frame)
-
-	end
-end
 
 function AreTablesSame(tableA, tableB)
 	if tableA == nil and tableB ~= nil then
@@ -891,11 +778,11 @@ function AreTablesSame(tableA, tableB)
 	elseif tableA == nil and tableB == nil then
 		return true
 	end
-	
+
 	if TableWithKeysLength(tableA) ~= TableWithKeysLength(tableB) then
 		return false
 	end
-	
+
 	for keyA, valueA in pairs(tableA) do
 		local valueB = tableB[keyA]
 		if type(valueA) == "table" and type(valueB) == "table" then
@@ -908,7 +795,7 @@ function AreTablesSame(tableA, tableB)
 			return false
 		end
 	end
-	
+
 	return true
 end
 
@@ -918,27 +805,6 @@ function TableWithKeysLength(tableA)
 		count = count + 1
 	end
 	return count
-end
-
-function UpdateRXCombinators()
-	-- if the RX buffer is not empty, get a frame from it and output on all RX Combinators
-	if #global.rxBuffer > 0 then
-		local frame = table.remove(global.rxBuffer)
-		for i,rxControl in pairs(global.rxControls) do
-			if rxControl.valid then
-				rxControl.parameters = {parameters = frame}
-				rxControl.enabled = true
-			end
-		end
-  else
-    -- no frames to send right now, blank all...
-    for i,rxControl in pairs(global.rxControls) do
-  		if rxControl.valid then
-			rxControl.parameters = {parameters = {}}
-  			rxControl.enabled = false
-  		end
-  	end
-	end
 end
 
 function UpdateInvCombinators()
@@ -984,7 +850,7 @@ remote.add_interface("clusterio",
 		GiveItemsToStorage(itemName, itemCount)
 	end,
 	importMany = function(jsonString)
-		local items = json:decode(jsonString)
+		local items = game.json_to_table(jsonString)
 		for k, item in pairs(items) do
 			for itemName, itemCount in pairs(item) do
 				GiveItemsToStorage(itemName, itemCount)
@@ -999,26 +865,12 @@ remote.add_interface("clusterio",
 		game.print(items)
 	end,
 	reset = Reset,
-	receiveFrame = function(jsonframe)
-		local frame = json:decode(jsonframe)
-		-- frame = {tick=123456,frame={{count=42,name="signal-grey",type="virtual"},{...},...}}
-		return AddFrameToRXBuffer(frame)
-	end,
-	receiveMany = function(jsonframes)
-		local frames = json:decode(jsonframes)
-		local buffer
-		for _,frame in pairs(frames) do
-			buffer = AddFrameToRXBuffer(frame)
-			if buffer==0 then return 0 end
-		end
-		return buffer
-	end,
 	setFilePlayer = function(i)
 		global.write_file_player = i
 	end,
 	receiveInventory = function(jsoninvdata)
 		global.ticksSinceMasterPinged = 0
-		local invdata = json:decode(jsoninvdata)
+		local invdata = game.json_to_table(jsoninvdata)
 		for name,count in pairs(invdata) do
 			global.invdata[name]=count
 		end
@@ -1026,9 +878,21 @@ remote.add_interface("clusterio",
 		UpdateInvCombinators()
 	end,
 	setWorldID = function(newid)
+		if global.worldID == newid then
+			return
+		end
 		global.worldID = newid
 		UpdateInvCombinators()
-	end
+		script.raise_event(customEvents.on_world_id_changed, { worldID = newid })
+	end,
+	-- Note: the world id is nil at the start of a new game and can change
+	--       for example when an instance save is moved to another instance.
+	getWorldID = function()
+		return global.worldID
+	end,
+	events = function()
+		return table.deepcopy(customEvents)
+	end,
 })
 
 commands.add_command("ccri", "clusterio internal command, receive Inventory", function(event)
@@ -1186,12 +1050,19 @@ function processElemGui(event, toUpdateConfigName)--VERY WIP
 end
 
 script.on_event(defines.events.on_gui_value_changed, function(event)
-	if event.element.name=="clusterio-Placing-Bounding-Box" then
-		global.config.PlacableArea=event.element.slider_value
-		local placeableAreaString = global.config.PlacableArea
+	if event.element.name=="clusterio-Placing-Bounding-Box-X" then
+		global.config.PlacableAreaX=event.element.slider_value
+		local placeableAreaString = global.config.PlacableAreaX
 		if placeableAreaString == 0 then placeableAreaString="none" end
 
-		event.element.parent["clusterio-Placing-Bounding-Box-Label"].caption="Chest/fluid bounding box: "..placeableAreaString
+		event.element.parent["clusterio-Placing-Bounding-Box-Label-X"].caption="Chest/fluid bounding box X: "..placeableAreaString
+	end
+	if event.element.name=="clusterio-Placing-Bounding-Box-Y" then
+		global.config.PlacableAreaY=event.element.slider_value
+		local placeableAreaString = global.config.PlacableAreaY
+		if placeableAreaString == 0 then placeableAreaString="none" end
+
+		event.element.parent["clusterio-Placing-Bounding-Box-Label-Y"].caption="Chest/fluid bounding box Y: "..placeableAreaString
 	end
 end)
 
@@ -1204,8 +1075,10 @@ function toggleMainConfigGui(parent)
 	local pane = parent.add{type = "frame", name = "clusterio-main-config-gui", direction = "vertical"}
 	pane.add{type = "button", name = "clusterio-Item-WB-list", caption = "Item White/Black list"}
     pane.add{type = "button", name = "clusterio-Fluid-WB-list", caption = "Fluid White/Black list"}
-	pane.add{type = "label" , name = "clusterio-Placing-Bounding-Box-Label", caption = "Chest/fluid bounding box: "..global.config.PlacableArea}
-	pane.add{type = "slider", name = "clusterio-Placing-Bounding-Box", minimum_value = 0, maximum_value = 800, value = global.config.PlacableArea}
+	pane.add{type = "label" , name = "clusterio-Placing-Bounding-Box-Label-X", caption = "Chest/fluid bounding box X: "..global.config.PlacableAreaX}
+	pane.add{type = "slider", name = "clusterio-Placing-Bounding-Box-X", minimum_value = 0, maximum_value = 800, value = global.config.PlacableAreaX}
+	pane.add{type = "label" , name = "clusterio-Placing-Bounding-Box-Label-Y", caption = "Chest/fluid bounding box Y: "..global.config.PlacableAreaY}
+	pane.add{type = "slider", name = "clusterio-Placing-Bounding-Box-Y", minimum_value = 0, maximum_value = 800, value = global.config.PlacableAreaY}
 
 	--Electricity panel
 	local electricityPane = pane.add{type = "frame", name = "clusterio-main-config-gui", direction = "horizontal"}
@@ -1322,4 +1195,3 @@ script.on_event(defines.events.on_player_died,function(event)
 	--if event.cause~=nil then if event.cause.name~="locomotive" then return end msg=msg.." by "..event.cause.name else msg=msg.."." end
 	game.write_file("alerts.txt","player_died, "..game.players[event.player_index].name.." has been killed by "..(event.cause or {name="unknown"}).name,true)
 end)
---script.on_load(function() commands.add_command("ccri","clusterio internal command",function(x) game.print(x.test) end ) end)

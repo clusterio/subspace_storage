@@ -48,7 +48,7 @@ function MakeLogisticEntity(entity, name, pictureFilename, pictureTablePath, ico
 			name = name,
 			icon = entity.icon,
 			icon_size = 32,
-			flags = {"goes-to-quickbar"},
+			flags = {},
 			subgroup = "liquid-subgroup",
 			order = "a[items]-b["..name.."]",
 			place_result = name,
@@ -137,7 +137,7 @@ data:extend({
 		name = OUTPUT_CHEST_NAME,
 		icon = OUTPUT_CHEST_ICON_PATH,
 		icon_size = OUTPUT_CHEST_ICON_SIZE,
-		flags = {"goes-to-quickbar"},
+		flags = {},
 		subgroup = "chest-subgroup",
 		order = "a[items]-b["..OUTPUT_CHEST_NAME.."]",
 		place_result = OUTPUT_CHEST_NAME,
@@ -160,7 +160,7 @@ data:extend({
 		name = INPUT_CHEST_NAME,
 		icon = INPUT_CHEST_ICON_PATH,
 		icon_size = INPUT_CHEST_ICON_SIZE,
-		flags = {"goes-to-quickbar"},
+		flags = {},
 		subgroup = "chest-subgroup",
 		order = "a[items]-b["..INPUT_CHEST_NAME.."]",
 		place_result = INPUT_CHEST_NAME,
@@ -296,7 +296,7 @@ data:extend({
 		name = INPUT_ELECTRICITY_NAME,
 		icon = putElectricity.icon,
 		icon_size = 32,
-		flags = {"goes-to-quickbar"},
+		flags = {},
 		subgroup = "electric-subgroup",
 		order = "a[items]-b["..INPUT_ELECTRICITY_NAME.."]",
 		place_result = INPUT_ELECTRICITY_NAME,
@@ -322,7 +322,7 @@ data:extend({
 		name = OUTPUT_ELECTRICITY_NAME,
 		icon = putElectricity.icon,
 		icon_size = 32,
-		flags = {"goes-to-quickbar"},
+		flags = {},
 		subgroup = "electric-subgroup",
 		order = "a[items]-b["..OUTPUT_ELECTRICITY_NAME.."]",
 		place_result = OUTPUT_ELECTRICITY_NAME,
@@ -341,30 +341,6 @@ data:extend{
 	},
 	{
 		type = "virtual-signal",
-		name = "signal-srctick",
-		icon = "__clusterio__/graphics/icons/signal_srctick.png",
-		icon_size = 32,
-		subgroup = "virtual-signal-clusterio",
-		order = "e[clusterio]-[1srctick]"
-	},
-	{
-		type = "virtual-signal",
-		name = "signal-srcid",
-		icon = "__clusterio__/graphics/icons/signal_srcid.png",
-		icon_size = 32,
-		subgroup = "virtual-signal-clusterio",
-		order = "e[clusterio]-[2srcid]"
-	},
-	{
-		type = "virtual-signal",
-		name = "signal-dstid",
-		icon = "__clusterio__/graphics/icons/signal_dstid.png",
-		icon_size = 32,
-		subgroup = "virtual-signal-clusterio",
-		order = "e[clusterio]-[3dstid]"
-	},
-	{
-		type = "virtual-signal",
 		name = "signal-localid",
 		icon = "__clusterio__/graphics/icons/signal_localid.png",
 		icon_size = 32,
@@ -379,76 +355,21 @@ data:extend{
 		subgroup = "virtual-signal-clusterio",
 		order = "e[clusterio]-[5unixtime]"
 	},
-}
-
--- TX Combinator
-local tx = table.deepcopy(data.raw["decider-combinator"]["decider-combinator"])
-tx.name = TX_COMBINATOR_NAME
-tx.minable.result = TX_COMBINATOR_NAME
-data:extend{
-	tx,
 	{
-		type = "item",
-		name = TX_COMBINATOR_NAME,
-		icon = tx.icon,
+		type = "virtual-signal",
+		name = "electricity",
+		icon = "__clusterio__/graphics/icons/signal_electricity.png",
 		icon_size = 32,
-		flags = {"goes-to-quickbar"},
-		subgroup = "signal-subgroup",
-		place_result=TX_COMBINATOR_NAME,
-		order = "a[items]-b["..TX_COMBINATOR_NAME.."]",
-		stack_size = 50,
-	},
-	{
-		type = "recipe",
-		name = TX_COMBINATOR_NAME,
-		enabled = true, -- TODO do this on a tech somewhere
-		ingredients =
-		{
-			{"decider-combinator", 1},
-			{"electronic-circuit", 50}
-		},
-		result = TX_COMBINATOR_NAME,
-		requester_paste_multiplier = 1
+		subgroup = "virtual-signal-clusterio",
+		order = "e[clusterio]-[5electricity]"
 	},
 }
 
--- RX Combinator
-local rx = table.deepcopy(data.raw["constant-combinator"]["constant-combinator"])
-rx.name = RX_COMBINATOR_NAME
-rx.minable.result = RX_COMBINATOR_NAME
-rx.item_slot_count = 500
-data:extend{
-	rx,
-	{
-		type = "item",
-		name = RX_COMBINATOR_NAME,
-		icon = rx.icon,
-		icon_size = 32,
-		flags = {"goes-to-quickbar"},
-		subgroup = "signal-subgroup",
-		place_result=RX_COMBINATOR_NAME,
-		order = "a[items]-b["..RX_COMBINATOR_NAME.."]",
-		stack_size = 50,
-	},
-	{
-		type = "recipe",
-		name = RX_COMBINATOR_NAME,
-		enabled = true, -- TODO do this on a tech somewhere
-		ingredients =
-		{
-			{"constant-combinator", 1},
-			{"electronic-circuit", 3},
-			{"advanced-circuit", 1}
-		},
-		result = RX_COMBINATOR_NAME,
-		requester_paste_multiplier = 1
-	},
-}
 -- Inventory Combinator
 local inv = table.deepcopy(data.raw["constant-combinator"]["constant-combinator"])
 inv.name = INV_COMBINATOR_NAME
 inv.minable.result = INV_COMBINATOR_NAME
-inv.item_slot_count = 500
+inv.item_slot_count = 2000
 data:extend{
 	inv,
 	{
@@ -456,7 +377,7 @@ data:extend{
 		name = INV_COMBINATOR_NAME,
 		icon = inv.icon,
 		icon_size = 32,
-		flags = {"goes-to-quickbar"},
+		flags = {},
 		subgroup = "signal-subgroup",
 		place_result=INV_COMBINATOR_NAME,
 		order = "a[items]-b["..INV_COMBINATOR_NAME.."]",
