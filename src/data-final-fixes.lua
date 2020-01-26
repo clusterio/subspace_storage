@@ -7,7 +7,7 @@ for k,v in pairs(data.raw.fluid) do
 			type = "recipe",
 			name = ("get-"..v.name),
 			icon = v.icon,
-			icon_size = 32,
+			icon_size = v.icon_size,
 			category = CRAFTING_FLUID_CATEGORY_NAME,
 			--localised_name = {v.name},
 			energy_required = 1,
