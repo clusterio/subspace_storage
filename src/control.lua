@@ -487,10 +487,10 @@ function HandleInputTank(entityData)
 		local fluid = fluidbox[1]
 		if fluid ~= nil and math.floor(fluid.amount) > 0 then
 			if isFluidLegal(fluid.name) then
-				local fluid_left = fluid.amount - math.floor(fluid.amount)
-				if fluid_left > 0 then
-					AddItemToInputList(fluid.name, math.floor(fluid.amount))
-					fluid.amount = fluid_left
+				if fluid.amount > 1 then
+					local fluid_taken = math.ceil(fluid.amount) - 1
+					AddItemToInputList(fluid.name, fluid_taken)
+					fluid.amount = fluid.amount - fluid_taken
 					fluidbox[1] = fluid
 				end
 			end
