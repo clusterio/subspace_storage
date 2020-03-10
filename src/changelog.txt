@@ -1,8 +1,15 @@
 ---------------------------------------------------------------------------------------------------
-Version: 0.16.1
-Date: 2020-01-25
+Version: 1.17.1
+Date: 02. 11. 2020
   Features:
-  - Now supported on 0.18
+    - Allow separate X and Y settings for PlaceableArea.
+---------------------------------------------------------------------------------------------------
+Version: 1.17.0
+Date: 01. 26. 2020
+  Features:
+    - Now supported on 0.18.
+  Buxfixes:
+    - Fixed fluid icons being the wrong sizes due to icon_size change.
 ---------------------------------------------------------------------------------------------------
 Version: 1.16.0
 Date: 08. 12. 2019
