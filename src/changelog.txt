@@ -1,8 +1,10 @@
 ---------------------------------------------------------------------------------------------------
 Version: 1.17.1
-Date: 02. 11. 2020
+Date: 03. 10. 2020
   Features:
     - Allow separate X and Y settings for PlaceableArea.
+  Bugfixes:
+    - Fixed fluidtransmitters getting stuck when full.
 ---------------------------------------------------------------------------------------------------
 Version: 1.17.0
 Date: 01. 26. 2020
