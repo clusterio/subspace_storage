@@ -1,10 +1,13 @@
 {
-    "name": "clusterio",
-    "version": "1.17.1",
-    "title": "Clusterio",
-    "author": "Danielv123 & Keyboardhack & justarandomgeek & AreYouScared & psihius & Godmave",
-    "contact": "danielv@live.no",
+    "name": "subspace_storage",
+    "version": "2.0.0",
+    "title": "Subspace Storage",
+    "author": "Clusterio Team",
     "homepage": "https://github.com/clusterio/factorioClusterio",
-    "description": "Allows transfer of items, fluids, research and signals between servers. *Server owners, see https://github.com/clusterio/factorioClusterio for installation instructions*",
-    "factorio_version": "0.18"
+    "description": "Allows storing items and fluids in a limitless shared subspace.",
+    "factorio_version": "0.17",
+    "dependencies": [
+        "base",
+        "clusterio_lib"
+    ]
 }

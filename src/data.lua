@@ -47,7 +47,7 @@ function MakeLogisticEntity(entity, name, pictureFilename, pictureTablePath, ico
 			type = "item",
 			name = name,
 			icon = entity.icon,
-			icon_size = 64,
+			icon_size = 32,
 			flags = {},
 			subgroup = "liquid-subgroup",
 			order = "a[items]-b["..name.."]",
@@ -84,7 +84,7 @@ data:extend(
 	{
 		type = "item-group",
 		name = "test-group",
-		icon = "__clusterio__/graphics/tech.png",
+		icon = "__subspace_storage__/graphics/tech.png",
 		icon_size = 128,
 		inventory_order = "f",
 		order = "e"
@@ -295,7 +295,7 @@ data:extend({
 		type = "item",
 		name = INPUT_ELECTRICITY_NAME,
 		icon = putElectricity.icon,
-		icon_size = 64,
+		icon_size = 32,
 		flags = {},
 		subgroup = "electric-subgroup",
 		order = "a[items]-b["..INPUT_ELECTRICITY_NAME.."]",
@@ -321,7 +321,7 @@ data:extend({
 		type = "item",
 		name = OUTPUT_ELECTRICITY_NAME,
 		icon = putElectricity.icon,
-		icon_size = 64,
+		icon_size = 32,
 		flags = {},
 		subgroup = "electric-subgroup",
 		order = "a[items]-b["..OUTPUT_ELECTRICITY_NAME.."]",
@@ -342,7 +342,7 @@ data:extend{
 	{
 		type = "virtual-signal",
 		name = "signal-localid",
-		icon = "__clusterio__/graphics/icons/signal_localid.png",
+		icon = "__subspace_storage__/graphics/icons/signal_localid.png",
 		icon_size = 32,
 		subgroup = "virtual-signal-clusterio",
 		order = "e[clusterio]-[4localid]"
@@ -350,7 +350,7 @@ data:extend{
 	{
 		type = "virtual-signal",
 		name = "signal-unixtime",
-		icon = "__clusterio__/graphics/icons/signal_unixtime.png",
+		icon = "__subspace_storage__/graphics/icons/signal_unixtime.png",
 		icon_size = 32,
 		subgroup = "virtual-signal-clusterio",
 		order = "e[clusterio]-[5unixtime]"
@@ -358,7 +358,7 @@ data:extend{
 	{
 		type = "virtual-signal",
 		name = "electricity",
-		icon = "__clusterio__/graphics/icons/signal_electricity.png",
+		icon = "__subspace_storage__/graphics/icons/signal_electricity.png",
 		icon_size = 32,
 		subgroup = "virtual-signal-clusterio",
 		order = "e[clusterio]-[5electricity]"
@@ -376,7 +376,7 @@ data:extend{
 		type = "item",
 		name = INV_COMBINATOR_NAME,
 		icon = inv.icon,
-		icon_size = 64,
+		icon_size = 32,
 		flags = {},
 		subgroup = "signal-subgroup",
 		place_result=INV_COMBINATOR_NAME,
@@ -402,7 +402,7 @@ data:extend(
             {
                 type = "sprite",
                 name = "clusterio",
-                filename = "__clusterio__/graphics/icons/clusterio.png",
+                filename = "__subspace_storage__/graphics/icons/clusterio.png",
                 priority = "medium",
                 width = 128,
                 height = 128,
