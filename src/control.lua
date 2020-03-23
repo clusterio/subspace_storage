@@ -3,6 +3,9 @@ require("config")
 require("mod-gui")
 require("LinkedList")
 
+local clusterio_api = require("__clusterio_lib__/api")
+
+
 ------------------------------------------------------------
 --[[Method that handle creation and deletion of entities]]--
 ------------------------------------------------------------
@@ -162,20 +165,26 @@ script.on_event(defines.events.on_pre_player_mined_item, function(event)
 end)
 
 
----------------------
---[[Custom events]]--
----------------------
-local customEvents = {
-	-- Contains the worldID attribute with the new id
-	on_world_id_changed = script.generate_event_name(),
-}
 
+------------------------
+--[[Clusterio events]]--
+------------------------
+local function RegisterClusterioEvents()
+	script.on_event(clusterio_api.events.on_instance_updated, UpdateInvCombinators)
+end
 
 ------------------------------
 --[[Thing resetting events]]--
 ------------------------------
 script.on_init(function()
+	clusterio_api.init()
+	RegisterClusterioEvents()
 	Reset()
+end)
+
+script.on_load(function()
+	clusterio_api.init()
+	RegisterClusterioEvents()
 end)
 
 script.on_configuration_changed(function(data)
@@ -469,7 +478,6 @@ function HandleInputChest(entityData)
 	if entity.valid then
 		--get the content of the chest
 		local items = inventory.get_contents()
-		--write everything to the file
 		for itemName, itemCount in pairs(items) do
 			if isItemLegal(itemName) then
 				AddItemToInputList(itemName, itemCount)
@@ -732,39 +740,48 @@ function EvenlyDistributeItems(request, functionToInsertItems)
 end
 
 
------------------------------------
---[[Methods that write to files]]--
------------------------------------
+----------------------------------------
+--[[Methods that talk with Clusterio]]--
+----------------------------------------
 function ExportInputList()
-	local exportStrings = {}
-	for k,v in pairs(global.inputList) do
-		exportStrings[#exportStrings + 1] = k.." "..v.."\n"
+	local items = {}
+	for name, count in pairs(global.inputList) do
+		table.insert(items, {name, count})
 	end
 	global.inputList = {}
-	if #exportStrings > 0 then
-
-		--only write to file once as i/o is slow
-		--it's much faster to concatenate all the lines with table.concat
-		--instead of doing it with the .. operator
-		game.write_file(OUTPUT_FILE, table.concat(exportStrings), true, global.write_file_player or 0)
+	if #items > 0 then
+		clusterio_api.send_json("subspace_storage:output", items)
 	end
 end
 
 function ExportOutputList()
-	local exportStrings = {}
-	for k,v in pairs(global.outputList) do
-		exportStrings[#exportStrings + 1] = k.." "..v.."\n"
+	local items = {}
+	for name, count in pairs(global.outputList) do
+		table.insert(items, {name, count})
 	end
 	global.outputList = {}
-	if #exportStrings > 0 then
-
-		--only write to file once as i/o is slow
-		--it's much faster to concatenate all the lines with table.concat
-		--instead of doing it with the .. operator
-		game.write_file(ORDER_FILE, table.concat(exportStrings), true, global.write_file_player or 0)
+	if #items > 0 then
+		clusterio_api.send_json("subspace_storage:orders", items)
 	end
 end
 
+function Import(data)
+	local items = game.json_to_table(data)
+	for _, item in ipairs(items) do
+		GiveItemsToStorage(item[1], item[2])
+	end
+end
+
+function UpdateInvData(data, full)
+	if full then
+		global.invdata = {}
+	end
+	local items = game.json_to_table(data)
+	for _, item in ipairs(items) do
+		global.invdata[item[1]] = item[2]
+	end
+	UpdateInvCombinators()
+end
 
 ---------------------------------
 --[[Update combinator methods]]--
@@ -811,8 +828,9 @@ function UpdateInvCombinators()
 	-- Update all inventory Combinators
 	-- Prepare a frame from the last inventory report, plus any virtuals
 	local invframe = {}
-	if global.worldID then
-		table.insert(invframe,{count=global.worldID,index=#invframe+1,signal={name="signal-localid",type="virtual"}})
+	local instance_id = clusterio_api.get_instance_id()
+	if instance_id then
+		table.insert(invframe,{count=instance_id,index=#invframe+1,signal={name="signal-localid",type="virtual"}})
 	end
 
 	local items = game.item_prototypes
@@ -845,18 +863,6 @@ end
 ---------------------
 remote.add_interface("clusterio",
 {
-	runcode=function(codeToRun) loadstring(codeToRun)() end,
-	import = function(itemName, itemCount)
-		GiveItemsToStorage(itemName, itemCount)
-	end,
-	importMany = function(jsonString)
-		local items = game.json_to_table(jsonString)
-		for k, item in pairs(items) do
-			for itemName, itemCount in pairs(item) do
-				GiveItemsToStorage(itemName, itemCount)
-			end
-		end
-	end,
 	printStorage = function()
 		local items = ""
 		for itemName, itemCount in pairs(global.itemStorage) do
@@ -865,53 +871,7 @@ remote.add_interface("clusterio",
 		game.print(items)
 	end,
 	reset = Reset,
-	setFilePlayer = function(i)
-		global.write_file_player = i
-	end,
-	receiveInventory = function(jsoninvdata)
-		global.ticksSinceMasterPinged = 0
-		local invdata = game.json_to_table(jsoninvdata)
-		for name,count in pairs(invdata) do
-			global.invdata[name]=count
-		end
-		-- invdata = {["iron-plates"]=1234,["copper-plates"]=5678,...}
-		UpdateInvCombinators()
-	end,
-	setWorldID = function(newid)
-		if global.worldID == newid then
-			return
-		end
-		global.worldID = newid
-		UpdateInvCombinators()
-		script.raise_event(customEvents.on_world_id_changed, { worldID = newid })
-	end,
-	-- Note: the world id is nil at the start of a new game and can change
-	--       for example when an instance save is moved to another instance.
-	getWorldID = function()
-		return global.worldID
-	end,
-	events = function()
-		return table.deepcopy(customEvents)
-	end,
 })
-
-commands.add_command("ccri", "clusterio internal command, receive Inventory", function(event)
-	if game.player then
-		return
-	end
-	local cmd = event.parameter
-	cmd = "for name,count in pairs(" + cmd + ") do global.invdata[name] = count end"
-	loadstring(cmd)()
-end)
-
-commands.add_command("ccrm", "clusterio internal command, receive Many", function(event)
-	if game.player then
-		return
-	end
-	local cmd = event.parameter
-	cmd = "for k,item in pairs(" + cmd + ") do GiveItemsToStorage(k, item) end"
-	loadstring(cmd)()
-end)
 
 
 --------------------
@@ -1188,10 +1148,4 @@ script.on_event(defines.events.on_player_joined_game,function(event)
 
 		makeConfigButton(mod_gui.get_button_flow(game.players[event.player_index]))
 	end
-end)
-
-script.on_event(defines.events.on_player_died,function(event)
-	--local msg="!shout "..game.players[event.player_index].name.." has been killed"
-	--if event.cause~=nil then if event.cause.name~="locomotive" then return end msg=msg.." by "..event.cause.name else msg=msg.."." end
-	game.write_file("alerts.txt","player_died, "..game.players[event.player_index].name.." has been killed by "..(event.cause or {name="unknown"}).name,true)
 end)
