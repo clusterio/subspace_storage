@@ -1,10 +1,10 @@
 {
     "name": "subspace_storage",
-    "version": "2.0.0",
-    "title": "Subspace Storage",
+    "version": "1.99.0",
+    "title": "Subspace Storage (Alpha)",
     "author": "Clusterio Team",
     "homepage": "https://github.com/clusterio/factorioClusterio",
-    "description": "Allows storing items and fluids in a limitless shared subspace.",
+    "description": "Allows storing items and fluids in a limitless shared subspace.  Warning: work in progress alpha.",
     "factorio_version": "0.17",
     "dependencies": [
         "base",
