@@ -574,8 +574,6 @@ function GetOutputTankRequest(requests, entityData)
 			--If the entity is missing fluid than add a request for fluid
 			if missingFluid > 0 then
 				local entry = AddRequestToTable(requests, fluidName, missingFluid, entity)
-				--Add fluid to the request so it doesn't have to be created again
-				entry.fluid = fluid
 				entry.fluidbox = fluidbox
 			end
 		end
@@ -623,16 +621,17 @@ function OutputChestInputMethod(request, itemName, evenShareOfItems)
 	end
 end
 
-function OutputTankInputMethod(request, _, evenShareOfFluid)
+function OutputTankInputMethod(request, fluidName, evenShareOfFluid)
 	if request.storage.valid then
-		request.fluid.amount = request.fluid.amount + evenShareOfFluid
+		local fluid = request.fluidbox[1] or {name = fluidName, amount = 0}
+		fluid.amount = fluid.amount + evenShareOfFluid
 
 		--Need to set steams heat because otherwise it's too low
-		if request.fluid.name == "steam" then
-			request.fluid.temperature = 165
+		if fluid.name == "steam" then
+			fluid.temperature = 165
 		end
 
-		request.fluidbox[1] = request.fluid
+		request.fluidbox[1] = fluid
 		return evenShareOfFluid
 	else
 		return 0
