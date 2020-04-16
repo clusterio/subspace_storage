@@ -5,12 +5,25 @@ const JSZip = require("jszip");
 const klaw = require("klaw");
 const path = require("path");
 const yargs = require("yargs");
+const child_process = require("child_process");
+
+
+async function exec(file, args) {
+	let child = child_process.spawn(file, args, { shell: false, stdio: 'inherit' });
+
+	await events.once(child, "exit");
+	if (child.exitCode !== 0) {
+		throw new Error(`Process exited with code ${child.exitCode}`);
+	}
+}
 
 
 async function main() {
 	const args = yargs
 		.scriptName("build")
 		.options({
+			'render': { describe: "Render assets", type: 'boolean', default: false },
+			'post': { describe: "Post process assets", type: 'boolean', default: false },
 			'clean': { describe: "Remove previous builds", type: 'boolean', default: false },
 			'build': { describe: "Build mod", type: 'boolean', default: true },
 			'pack': { describe: "Pack into zip file", type: 'boolean', default: true },
@@ -18,9 +31,29 @@ async function main() {
 			'output-dir': { describe: "Path to output built mod", nargs: 1, type: 'string', default: "dist" },
 			'bump-patch': { describe: "Increment patch number of build", type: 'boolean', default: false },
 			'factorio-version': { describe: "Override factorio_version", type: 'string' },
+			'blender-path': { describe: "Path to blender", type: 'string', default: 'blender' },
 		})
 		.argv
 	;
+
+	if (args.render) {
+		await exec(
+			args.blenderPath,
+			[
+				"--background",
+				"--python-exit-code", "1",
+				path.join("assets", "model.blend"),
+				"--python", path.join("assets", "render.py")
+			]
+		);
+	}
+
+	if (args.post) {
+		await exec(
+			process.platform === 'win32' ? "py" : "python",
+			["post.py"],
+		);
+	}
 
 	let info = JSON.parse(await fs.readFile(path.join(args.sourceDir, "info.json")));
 

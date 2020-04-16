@@ -41,7 +41,11 @@ luac.out
 
 # Build files
 dist/
+render/
 
 # npm package manager
 node_modules/
 package-lock.json
+
+# Blender save versions
+*.blend[1-9]

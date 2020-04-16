@@ -1,6 +1,11 @@
 ---------------------------------------------------------------------------------------------------
 Version: 1.99.2
+  Features:
+    - New placeholder artwork for the subspace interactors.
+  Changes:
+    - subspace item, fluid, and electricity interactors are now all 8x8 in size.
   Buxfixes:
+    - Fixed item extractor showing out of logistics network icon.
     - Fixed fluid duplication in extractors.
 ---------------------------------------------------------------------------------------------------
 Version: 1.99.1
