@@ -27,9 +27,11 @@ function OnBuiltEntity(event)
 	local name = entity.name
 	if name == "entity-ghost" then name = entity.ghost_name end
 
-	if ENTITY_TELEPORTATION_RESTRICTION and (name == "subspace-item-injector" or name == "subspace-item-extractor" or name == "subspace-fluid-injector" or name == "subspace-fluid-extractor") then
-		if ((global.config.PlacableAreaX == 0 or (x < global.config.PlacableAreaX and x > 0-global.config.PlacableAreaX)) and
-		    (global.config.PlacableAreaY == 0 or (y < global.config.PlacableAreaY and y > 0-global.config.PlacableAreaY))) then
+	local restrictionEnabled = settings.global["subspace_storage-range-restriction-enabled"].value
+	if restrictionEnabled and (name == "subspace-item-injector" or name == "subspace-item-extractor" or name == "subspace-fluid-injector" or name == "subspace-fluid-extractor") then
+		local width = settings.global["subspace_storage-zone-width"].value
+		local height = settings.global["subspace_storage-zone-height"].value
+		if ((width == 0 or (math.abs(x) < width / 2)) and (height == 0 or (math.abs(y) < height / 2))) then
 			--only add entities that are not ghosts
 			if entity.type ~= "entity-ghost" then
 				AddEntity(entity)
@@ -37,7 +39,7 @@ function OnBuiltEntity(event)
 		else
 			if player and player.valid then
 				-- Tell the player what is happening
-				if player then player.print("Attempted placing entity outside allowed area (placed at x "..x.." y "..y.." out of allowed "..(global.config.PlacableAreaX > 0 and global.config.PlacableAreaX or "none").. "x"..(global.config.PlacableAreaY > 0 and global.config.PlacableAreaY or "none")..")") end
+				if player then player.print("Subspace interactor outside allowed area (placed at x "..x.." y "..y.." out of allowed "..(width > 0 and width or "inf").. " x "..(height > 0 and height or "inf")..")") end
 				-- kill entity, try to give it back to the player though
 				if not player.mine_entity(entity, true) then
 					entity.destroy()
@@ -219,18 +221,10 @@ function Reset()
 			item_is_whitelist = false,
 			BWfluids = {},
 			fluid_is_whitelist = false,
-			PlacableAreaX = 200,
-			PlacableAreaY = 200
 		}
 	end
 	if global.invdata == nil then
 		global.invdata = {}
-	end
-	-- Migrate from PlacableArea to PlacableAreaX and PlacableAreaY
-	if not global.config.PlacableAreaX then
-		global.config.PlacableAreaX = global.config.PlacableArea
-		global.config.PlacableAreaY = global.config.PlacableArea
-		global.config.PlacableArea = nil
 	end
 
 	global.outputList = {}
@@ -999,23 +993,6 @@ function processElemGui(event, toUpdateConfigName)--VERY WIP
 	end
 end
 
-script.on_event(defines.events.on_gui_value_changed, function(event)
-	if event.element.name=="clusterio-Placing-Bounding-Box-X" then
-		global.config.PlacableAreaX=event.element.slider_value
-		local placeableAreaString = global.config.PlacableAreaX
-		if placeableAreaString == 0 then placeableAreaString="none" end
-
-		event.element.parent["clusterio-Placing-Bounding-Box-Label-X"].caption="Chest/fluid bounding box X: "..placeableAreaString
-	end
-	if event.element.name=="clusterio-Placing-Bounding-Box-Y" then
-		global.config.PlacableAreaY=event.element.slider_value
-		local placeableAreaString = global.config.PlacableAreaY
-		if placeableAreaString == 0 then placeableAreaString="none" end
-
-		event.element.parent["clusterio-Placing-Bounding-Box-Label-Y"].caption="Chest/fluid bounding box Y: "..placeableAreaString
-	end
-end)
-
 function toggleMainConfigGui(parent)
 	if parent["clusterio-main-config-gui"] then
         parent["clusterio-main-config-gui"].destroy()
@@ -1025,10 +1002,6 @@ function toggleMainConfigGui(parent)
 	local pane = parent.add{type = "frame", name = "clusterio-main-config-gui", direction = "vertical"}
 	pane.add{type = "button", name = "clusterio-Item-WB-list", caption = "Item White/Black list"}
     pane.add{type = "button", name = "clusterio-Fluid-WB-list", caption = "Fluid White/Black list"}
-	pane.add{type = "label" , name = "clusterio-Placing-Bounding-Box-Label-X", caption = "Chest/fluid bounding box X: "..global.config.PlacableAreaX}
-	pane.add{type = "slider", name = "clusterio-Placing-Bounding-Box-X", minimum_value = 0, maximum_value = 800, value = global.config.PlacableAreaX}
-	pane.add{type = "label" , name = "clusterio-Placing-Bounding-Box-Label-Y", caption = "Chest/fluid bounding box Y: "..global.config.PlacableAreaY}
-	pane.add{type = "slider", name = "clusterio-Placing-Bounding-Box-Y", minimum_value = 0, maximum_value = 800, value = global.config.PlacableAreaY}
 
 	--Electricity panel
 	local electricityPane = pane.add{type = "frame", name = "clusterio-main-config-gui", direction = "horizontal"}
