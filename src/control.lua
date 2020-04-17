@@ -171,6 +171,10 @@ script.on_event(defines.events.on_pre_player_mined_item, function(event)
 	OnKilledEntity(event)
 end)
 
+script.on_event(defines.events.script_raised_destroy, function(event)
+	OnKilledEntity(event)
+end)
+
 
 
 ------------------------
@@ -552,8 +556,12 @@ function GetOutputTankRequest(requests, entityData)
 	--The type of fluid the tank should output
 	--is determined by the recipe set in the  entity.
 	--If no recipe is set then it shouldn't output anything
-	local recipe = entity.get_recipe()
-	if entity.valid and recipe ~= nil then
+
+	if entity.valid then
+		local recipe = entity.get_recipe()
+		if recipe == nil then
+			return
+		end
 		--Get name of the fluid to output
 		local fluidName = recipe.products[1].name
 		--Some fluids may be illegal. If that's the case then don't process them
