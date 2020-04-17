@@ -56,13 +56,10 @@ function OnBuiltEntity(event)
 end
 
 function AddAllEntitiesOfNames(names)
-	local filters = {}
-	for i = 1, #names do
-		local name = names[i]
-		filters[#filters + 1] = {name = name}
-	end
-	for k, surface in pairs(game.surfaces) do
-		AddEntities(surface.find_entities_filtered(filters))
+	for _, surface in pairs(game.surfaces) do
+		for _, name in ipairs(names) do
+			AddEntities(surface.find_entities_filtered { name = name })
+		end
 	end
 end
 

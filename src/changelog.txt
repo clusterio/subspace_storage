@@ -7,6 +7,7 @@ Version: 1.99.2
   Buxfixes:
     - Fixed item extractor showing out of logistics network icon.
     - Fixed fluid duplication in extractors.
+    - Fixed reset iterating over every entity in the game.
 ---------------------------------------------------------------------------------------------------
 Version: 1.99.1
   Features:
