@@ -227,6 +227,9 @@ function Reset()
 		global.invdata = {}
 	end
 
+	rendering.clear("subspace_storage")
+	global.zoneDraw = {}
+
 	global.outputList = {}
 	global.inputList = {}
 	global.itemStorage = {}
@@ -1110,5 +1113,60 @@ script.on_event(defines.events.on_player_joined_game,function(event)
 		end
 
 		makeConfigButton(mod_gui.get_button_flow(game.players[event.player_index]))
+	end
+end)
+
+script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
+	local player = game.players[event.player_index]
+	if not player or not player.valid then
+		return
+	end
+
+	local restrictionEnabled = settings.global["subspace_storage-range-restriction-enabled"].value
+	local drawZone = false
+	if restrictionEnabled then
+		local stack = player.cursor_stack
+		if stack and stack.valid and stack.valid_for_read then
+			local name = stack.name
+			if
+				name == "subspace-item-injector"
+				or name == "subspace-item-extractor"
+				or name == "subspace-fluid-injector"
+				or name == "subspace-fluid-extractor"
+				or name == "subspace-electricity-injector"
+				or name == "subspace-electricity-extractor"
+			then
+				drawZone = true
+			end
+		end
+	end
+
+	if drawZone then
+		if not global.zoneDraw[event.player_index] then
+			local spawn = player.force.get_spawn_position(player.surface)
+			local x0 = spawn.x
+			local y0 = spawn.y
+
+			local width = settings.global["subspace_storage-zone-width"].value
+			local height = settings.global["subspace_storage-zone-height"].value
+			if width == 0 then width = 2000000 end
+			if height == 0 then height = 2000000 end
+
+			global.zoneDraw[event.player_index] = rendering.draw_rectangle {
+				color = {r=0.8 , g=0.1, b=0},
+				width = 12,
+				filled = false,
+				left_top = {x0 - width / 2, y0 - height / 2},
+				right_bottom = {x0 + width / 2, y0 + height / 2},
+				surface = player.surface,
+				players = {player},
+				draw_on_ground = true,
+			}
+		end
+	else
+		if global.zoneDraw[event.player_index] then
+			rendering.destroy(global.zoneDraw[event.player_index])
+			global.zoneDraw[event.player_index] = nil
+		end
 	end
 end)

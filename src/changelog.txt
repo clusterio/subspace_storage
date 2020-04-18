@@ -2,6 +2,7 @@
 Version: 1.99.2
   Features:
     - New placeholder artwork for the subspace interactors.
+    - Restriction zone border is drawn when subspace interactors is the active cursor stack.
   Changes:
     - subspace item, fluid, and electricity interactors are now all 8x8 in size.
     - Moved injector and extractor range restriction config to Factorio's built-in mod settings.
