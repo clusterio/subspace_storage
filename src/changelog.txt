@@ -2,11 +2,15 @@
 Version: 1.99.2
   Features:
     - New placeholder artwork for the subspace interactors.
+    - Restriction zone border is drawn when subspace interactors is the active cursor stack.
   Changes:
     - subspace item, fluid, and electricity interactors are now all 8x8 in size.
+    - Moved injector and extractor range restriction config to Factorio's built-in mod settings.
   Buxfixes:
     - Fixed item extractor showing out of logistics network icon.
     - Fixed fluid duplication in extractors.
+    - Fixed reset iterating over every entity in the game.
+    - Fixed crash on deconstruct planning fluid extractors in the editor.
 ---------------------------------------------------------------------------------------------------
 Version: 1.99.1
   Features:

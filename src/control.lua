@@ -1,7 +1,6 @@
 require("util")
 require("config")
 require("mod-gui")
-require("LinkedList")
 
 local clusterio_api = require("__clusterio_lib__/api")
 
@@ -28,9 +27,11 @@ function OnBuiltEntity(event)
 	local name = entity.name
 	if name == "entity-ghost" then name = entity.ghost_name end
 
-	if ENTITY_TELEPORTATION_RESTRICTION and (name == "subspace-item-injector" or name == "subspace-item-extractor" or name == "subspace-fluid-injector" or name == "subspace-fluid-extractor") then
-		if ((global.config.PlacableAreaX == 0 or (x < global.config.PlacableAreaX and x > 0-global.config.PlacableAreaX)) and
-		    (global.config.PlacableAreaY == 0 or (y < global.config.PlacableAreaY and y > 0-global.config.PlacableAreaY))) then
+	local restrictionEnabled = settings.global["subspace_storage-range-restriction-enabled"].value
+	if restrictionEnabled and (name == "subspace-item-injector" or name == "subspace-item-extractor" or name == "subspace-fluid-injector" or name == "subspace-fluid-extractor") then
+		local width = settings.global["subspace_storage-zone-width"].value
+		local height = settings.global["subspace_storage-zone-height"].value
+		if ((width == 0 or (math.abs(x) < width / 2)) and (height == 0 or (math.abs(y) < height / 2))) then
 			--only add entities that are not ghosts
 			if entity.type ~= "entity-ghost" then
 				AddEntity(entity)
@@ -38,7 +39,7 @@ function OnBuiltEntity(event)
 		else
 			if player and player.valid then
 				-- Tell the player what is happening
-				if player then player.print("Attempted placing entity outside allowed area (placed at x "..x.." y "..y.." out of allowed "..(global.config.PlacableAreaX > 0 and global.config.PlacableAreaX or "none").. "x"..(global.config.PlacableAreaY > 0 and global.config.PlacableAreaY or "none")..")") end
+				if player then player.print("Subspace interactor outside allowed area (placed at x "..x.." y "..y.." out of allowed "..(width > 0 and width or "inf").. " x "..(height > 0 and height or "inf")..")") end
 				-- kill entity, try to give it back to the player though
 				if not player.mine_entity(entity, true) then
 					entity.destroy()
@@ -57,13 +58,10 @@ function OnBuiltEntity(event)
 end
 
 function AddAllEntitiesOfNames(names)
-	local filters = {}
-	for i = 1, #names do
-		local name = names[i]
-		filters[#filters + 1] = {name = name}
-	end
-	for k, surface in pairs(game.surfaces) do
-		AddEntities(surface.find_entities_filtered(filters))
+	for _, surface in pairs(game.surfaces) do
+		for _, name in ipairs(names) do
+			AddEntities(surface.find_entities_filtered { name = name })
+		end
 	end
 end
 
@@ -76,41 +74,52 @@ end
 function AddEntity(entity)
 	if entity.name == "subspace-item-injector" then
 		--add the chests to a lists if these chests so they can be interated over
-		AddLink(global.inputChestsData.entitiesData, {
+		table.insert(global.inputChestsData.entitiesData, {
 			entity = entity,
 			inv = entity.get_inventory(defines.inventory.chest)
-		}, entity.unit_number)
+		})
 	elseif entity.name == "subspace-item-extractor" then
 		--add the chests to a lists if these chests so they can be interated over
-		AddLink(global.outputChestsData.entitiesData, {
+		table.insert(global.outputChestsData.entitiesData, {
 			entity = entity,
 			inv = entity.get_inventory(defines.inventory.chest),
 			filterCount = entity.prototype.filter_count
-		}, entity.unit_number)
+		})
 	elseif entity.name == "subspace-fluid-injector" then
 		--add the chests to a lists if these chests so they can be interated over
-		AddLink(global.inputTanksData.entitiesData, {
+		table.insert(global.inputTanksData.entitiesData, {
 			entity = entity,
 			fluidbox = entity.fluidbox
-		}, entity.unit_number)
+		})
 	elseif entity.name == "subspace-fluid-extractor" then
 		--add the chests to a lists if these chests so they can be interated over
-		AddLink(global.outputTanksData.entitiesData, {
+		table.insert(global.outputTanksData.entitiesData, {
 			entity = entity,
 			fluidbox = entity.fluidbox
-		}, entity.unit_number)
+		})
 		--previous version made then inactive which isn't desired anymore
 		entity.active = true
 	elseif entity.name == INV_COMBINATOR_NAME then
 		global.invControls[entity.unit_number] = entity.get_or_create_control_behavior()
 		entity.operable=false
 	elseif entity.name == "subspace-electricity-injector" then
-		AddLink(global.inputElectricityData.entitiesData, entity, entity.unit_number)
+		table.insert(global.inputElectricityData.entitiesData, {
+			entity = entity
+		})
 	elseif entity.name == "subspace-electricity-extractor" then
-		AddLink(global.outputElectricityData.entitiesData, {
+		table.insert(global.outputElectricityData.entitiesData, {
 			entity = entity,
 			bufferSize = entity.electric_buffer_size
-		}, entity.unit_number)
+		})
+	end
+end
+
+function RemoveEntity(list, entity)
+	for _, v in ipairs(list) do
+		if v.entity == entity then
+			table.remove(list, i)
+			break
+		end
 	end
 end
 
@@ -119,19 +128,19 @@ function OnKilledEntity(event)
 	if entity.type ~= "entity-ghost" then
 		--remove the entities from the tables as they are dead
 		if entity.name == "subspace-item-injector" then
-			RemoveLink(global.inputChestsData.entitiesData, entity.unit_number)
+			RemoveEntity(global.inputChestsData.entitiesData, entity)
 		elseif entity.name == "subspace-item-extractor" then
-			RemoveLink(global.outputChestsData.entitiesData, entity.unit_number)
+			RemoveEntity(global.outputChestsData.entitiesData, entity)
 		elseif entity.name == "subspace-fluid-injector" then
-			RemoveLink(global.inputTanksData.entitiesData, entity.unit_number)
+			RemoveEntity(global.inputTanksData.entitiesData, entity)
 		elseif entity.name == "subspace-fluid-extractor" then
-			RemoveLink(global.outputTanksData.entitiesData, entity.unit_number)
+			RemoveEntity(global.outputTanksData.entitiesData, entity)
 		elseif entity.name == INV_COMBINATOR_NAME then
 			global.invControls[entity.unit_number] = nil
 		elseif entity.name == "subspace-electricity-injector" then
-			RemoveLink(global.inputElectricityData.entitiesData, entity.unit_number)
+			RemoveEntity(global.inputElectricityData.entitiesData, entity)
 		elseif entity.name == "subspace-electricity-extractor" then
-			RemoveLink(global.outputElectricityData.entitiesData, entity.unit_number)
+			RemoveEntity(global.outputElectricityData.entitiesData, entity)
 		end
 	end
 end
@@ -164,6 +173,10 @@ script.on_event(defines.events.on_pre_player_mined_item, function(event)
 	OnKilledEntity(event)
 end)
 
+script.on_event(defines.events.script_raised_destroy, function(event)
+	OnKilledEntity(event)
+end)
+
 
 
 ------------------------
@@ -188,7 +201,7 @@ script.on_load(function()
 end)
 
 script.on_configuration_changed(function(data)
-	if data.mod_changes and data.mod_changes["clusterio"] then
+	if data.mod_changes and data.mod_changes["subspace_storage"] then
 		Reset()
 	end
 end)
@@ -208,19 +221,14 @@ function Reset()
 			item_is_whitelist = false,
 			BWfluids = {},
 			fluid_is_whitelist = false,
-			PlacableAreaX = 200,
-			PlacableAreaY = 200
 		}
 	end
 	if global.invdata == nil then
 		global.invdata = {}
 	end
-	-- Migrate from PlacableArea to PlacableAreaX and PlacableAreaY
-	if not global.config.PlacableAreaX then
-		global.config.PlacableAreaX = global.config.PlacableArea
-		global.config.PlacableAreaY = global.config.PlacableArea
-		global.config.PlacableArea = nil
-	end
+
+	rendering.clear("subspace_storage")
+	global.zoneDraw = {}
 
 	global.outputList = {}
 	global.inputList = {}
@@ -229,33 +237,33 @@ function Reset()
 
 	global.inputChestsData =
 	{
-		entitiesData = CreateDoublyLinkedList()
+		entitiesData = { pos = 0 },
 	}
 	global.outputChestsData =
 	{
-		entitiesData = CreateDoublyLinkedList(),
+		entitiesData = { pos = 0 },
 		requests = {},
 		requestsLL = nil
 	}
 
 	global.inputTanksData =
 	{
-		entitiesData = CreateDoublyLinkedList()
+		entitiesData = { pos = 0 },
 	}
 	global.outputTanksData =
 	{
-		entitiesData = CreateDoublyLinkedList(),
+		entitiesData = { pos = 0 },
 		requests = {},
 		requestsLL = nil
 	}
 
 	global.inputElectricityData =
 	{
-		entitiesData = CreateDoublyLinkedList()
+		entitiesData = { pos = 0 },
 	}
 	global.outputElectricityData =
 	{
-		entitiesData = CreateDoublyLinkedList(),
+		entitiesData = { pos = 0 },
 		requests = {},
 		requestsLL = nil
 	}
@@ -309,14 +317,15 @@ script.on_event(defines.events.on_tick, function(event)
 			if global.workTick == 0 then
 				ResetRequestGathering()
 			end
-			RetrieveGetterRequests(global.allowedToMakeElectricityRequests)
+			RetrieveGetterRequests(global.allowedToMakeElectricityRequests, TICKS_TO_COLLECT_REQUESTS + global.workTick)
 		elseif global.workTick >= TICKS_TO_COLLECT_REQUESTS and global.workTick < TICKS_TO_COLLECT_REQUESTS + TICKS_TO_FULFILL_REQUESTS then
 			if global.workTick == TICKS_TO_COLLECT_REQUESTS then
 				UpdateUseableStorage()
 				PrepareToFulfillRequests()
 				ResetFulfillRequestIterators()
 			end
-			FulfillGetterRequests(global.allowedToMakeElectricityRequests)
+			local ticksLeft = (TICKS_TO_COLLECT_REQUESTS + TICKS_TO_FULFILL_REQUESTS) - global.workTick
+			FulfillGetterRequests(global.allowedToMakeElectricityRequests, ticksLeft)
 		end
 
 		--Emptying putters will continiously happen
@@ -325,7 +334,7 @@ script.on_event(defines.events.on_tick, function(event)
 			if global.workTick == 0 then
 				ResetPutterIterators()
 			end
-			EmptyPutters()
+			EmptyPutters((TICKS_TO_COLLECT_REQUESTS + TICKS_TO_FULFILL_REQUESTS) - global.workTick)
 		end
 
 		if     global.workTick == TICKS_TO_COLLECT_REQUESTS + TICKS_TO_FULFILL_REQUESTS + 0 then
@@ -361,113 +370,101 @@ end
 --[[Getter and setter update methods]]--
 ----------------------------------------
 function ResetRequestGathering()
-	RestartIterator(global.outputChestsData.entitiesData     , TICKS_TO_COLLECT_REQUESTS)
+	global.outputChestsData.entitiesData.pos = 0
 	global.outputChestsData.requests = {}
 
-	RestartIterator(global.outputTanksData.entitiesData      , TICKS_TO_COLLECT_REQUESTS)
+	global.outputTanksData.entitiesData.pos = 0
 	global.outputTanksData.requests = {}
 
-	RestartIterator(global.outputElectricityData.entitiesData, TICKS_TO_COLLECT_REQUESTS)
+	global.outputElectricityData.entitiesData.pos = 0
 	global.outputElectricityData.requests = {}
 end
 
 function ResetFulfillRequestIterators()
-	RestartIterator(global.outputChestsData.requestsLL     , TICKS_TO_FULFILL_REQUESTS)
-	RestartIterator(global.outputTanksData.requestsLL      , TICKS_TO_FULFILL_REQUESTS)
-	RestartIterator(global.outputElectricityData.requestsLL, TICKS_TO_FULFILL_REQUESTS)
+	global.outputChestsData.requestsLL.pos = 0
+	global.outputTanksData.requestsLL.pos = 0
+	global.outputElectricityData.requestsLL.pos = 0
 end
 
 function ResetPutterIterators()
-	RestartIterator(global.inputChestsData.entitiesData     , TICKS_TO_COLLECT_REQUESTS + TICKS_TO_FULFILL_REQUESTS)
-	RestartIterator(global.inputTanksData.entitiesData      , TICKS_TO_COLLECT_REQUESTS + TICKS_TO_FULFILL_REQUESTS)
-	RestartIterator(global.inputElectricityData.entitiesData, TICKS_TO_COLLECT_REQUESTS + TICKS_TO_FULFILL_REQUESTS)
+	global.inputChestsData.entitiesData.pos = 0
+	global.inputTanksData.entitiesData.pos = 0
+	global.inputElectricityData.entitiesData.pos = 0
 end
 
 function PrepareToFulfillRequests()
-	global.outputChestsData.requestsLL      = ArrayToLinkedListOfRequests(global.outputChestsData.requests     , true)
-	global.outputTanksData.requestsLL       = ArrayToLinkedListOfRequests(global.outputTanksData.requests      , false)
-	global.outputElectricityData.requestsLL = ArrayToLinkedListOfRequests(global.outputElectricityData.requests, false)
+	global.outputChestsData.requestsLL      = PrepareRequests(global.outputChestsData.requests     , true)
+	global.outputTanksData.requestsLL       = PrepareRequests(global.outputTanksData.requests      , false)
+	global.outputElectricityData.requestsLL = PrepareRequests(global.outputElectricityData.requests, false)
 end
 
-function RetrieveGetterRequests(allowedToGetElectricityRequests)
-	local chestLL = global.outputChestsData.entitiesData
-	for i = 1, chestLL.iterator.linksPerTick do
-		local nextLink = NextLink(chestLL)
-		if nextLink ~= nil then
-			GetOutputChestRequest(global.outputChestsData.requests, nextLink.data)
+-- Iterates through a sequence over a number of separate runs
+function partial_ipairs(list, runs_left)
+	function iterator(state, pos)
+		if pos >= state.endpoint or pos >= #state.list then
+			return nil, nil
 		end
+		return pos + 1, state.list[pos + 1]
 	end
 
-	local tankLL = global.outputTanksData.entitiesData
-	for i = 1, tankLL.iterator.linksPerTick do
-		local nextLink = NextLink(tankLL)
-		if nextLink ~= nil then
-			GetOutputTankRequest(global.outputTanksData.requests, nextLink.data)
-		end
+	local pos = list.pos
+	local endpoint = pos + math.max(0, math.ceil((#list - pos) / runs_left))
+	list.pos = endpoint
+	return iterator, { list = list, endpoint = endpoint }, pos
+end
+
+function RetrieveGetterRequests(allowedToGetElectricityRequests, ticksLeft)
+	local chestData = global.outputChestsData.entitiesData
+	for _, data in partial_ipairs(chestData, ticksLeft) do
+		GetOutputChestRequest(global.outputChestsData.requests, data)
+	end
+
+	local tankData = global.outputTanksData.entitiesData
+	for _, data in partial_ipairs(tankData, ticksLeft) do
+		GetOutputTankRequest(global.outputTanksData.requests, data)
 	end
 
 	if allowedToGetElectricityRequests then
-		local electricityLL = global.outputElectricityData.entitiesData
-		for i = 1, electricityLL.iterator.linksPerTick do
-			local nextLink = NextLink(electricityLL)
-			if nextLink ~= nil then
-				GetOutputElectricityRequest(global.outputElectricityData.requests, nextLink.data)
-			end
+		local electricityData = global.outputElectricityData.entitiesData
+		for _, data in partial_ipairs(electricityData, ticksLeft) do
+			GetOutputElectricityRequest(global.outputElectricityData.requests, data)
 		end
 	end
 end
 
-function FulfillGetterRequests(allowedToGetElectricityRequests)
-	local chestLL = global.outputChestsData.requestsLL
-	for i = 1, chestLL.iterator.linksPerTick do
-		local nextLink = NextLink(chestLL)
-		if nextLink ~= nil then
-			FulfillOutputChestRequest(nextLink.data)
-		end
+function FulfillGetterRequests(allowedToGetElectricityRequests, ticksLeft)
+	local chestRequests = global.outputChestsData.requestsLL
+	for _, data in partial_ipairs(chestRequests, ticksLeft) do
+		EvenlyDistributeItems(data, OutputChestInputMethod)
 	end
 
-	local tankLL = global.outputTanksData.requestsLL
-	for i = 1, tankLL.iterator.linksPerTick do
-		local nextLink = NextLink(tankLL)
-		if nextLink ~= nil then
-			FulfillOutputTankRequest(nextLink.data)
-		end
+	local tankRequests = global.outputTanksData.requestsLL
+	for _, data in partial_ipairs(tankRequests, ticksLeft) do
+		EvenlyDistributeItems(data, OutputTankInputMethod)
 	end
 
 	if allowedToGetElectricityRequests then
-		local electricityLL = global.outputElectricityData.requestsLL
-		for i = 1, electricityLL.iterator.linksPerTick do
-			local nextLink = NextLink(electricityLL)
-			if nextLink ~= nil then
-				FulfillOutputElectricityRequest(nextLink.data)
-			end
+		local electricityRequests = global.outputElectricityData.requestsLL
+		for _, data in partial_ipairs(electricityRequests, ticksLeft) do
+			EvenlyDistributeItems(data, OutputElectricityinputMethod)
 		end
 	end
 end
 
-function EmptyPutters()
-	local chestLL = global.inputChestsData.entitiesData
-	for i = 1, chestLL.iterator.linksPerTick do
-		local nextLink = NextLink(chestLL)
-		if nextLink ~= nil then
-			HandleInputChest(nextLink.data)
-		end
+function EmptyPutters(ticksLeft)
+	local chestData = global.inputChestsData.entitiesData
+	for _, data in partial_ipairs(chestData, ticksLeft) do
+		HandleInputChest(data)
 	end
 
-	local tankLL = global.inputTanksData.entitiesData
-	for i = 1, tankLL.iterator.linksPerTick do
-		local nextLink = NextLink(tankLL)
-		if nextLink ~= nil then
-			HandleInputTank(nextLink.data)
-		end
+	local tankData = global.inputTanksData.entitiesData
+	for _, data in partial_ipairs(tankData, ticksLeft) do
+		HandleInputTank(data)
 	end
 
-	local electricityLL = global.inputElectricityData.entitiesData
-	for i = 1, electricityLL.iterator.linksPerTick do
-		local nextLink = NextLink(electricityLL)
-		if nextLink ~= nil then
-			HandleInputElectricity(nextLink.data)
-		end
+	local electricityData = global.inputElectricityData.entitiesData
+	for _, data in partial_ipairs(electricityData, ticksLeft) do
+		HandleInputElectricity(data)
 	end
 end
 
@@ -506,12 +503,13 @@ function HandleInputTank(entityData)
 	end
 end
 
-function HandleInputElectricity(entity)
+function HandleInputElectricity(entityData)
 	--if there is too much energy in the network then stop outputting more
 	if global.invdata and global.invdata[ELECTRICITY_ITEM_NAME] and global.invdata[ELECTRICITY_ITEM_NAME] >= global.maxElectricity then
 		return
 	end
 
+	local entity = entityData.entity
 	if entity.valid then
 		local energy = entity.energy
 		local availableEnergy = math.floor(energy / ELECTRICITY_RATIO)
@@ -555,8 +553,12 @@ function GetOutputTankRequest(requests, entityData)
 	--The type of fluid the tank should output
 	--is determined by the recipe set in the  entity.
 	--If no recipe is set then it shouldn't output anything
-	local recipe = entity.get_recipe()
-	if entity.valid and recipe ~= nil then
+
+	if entity.valid then
+		local recipe = entity.get_recipe()
+		if recipe == nil then
+			return
+		end
 		--Get name of the fluid to output
 		local fluidName = recipe.products[1].name
 		--Some fluids may be illegal. If that's the case then don't process them
@@ -592,20 +594,6 @@ function GetOutputElectricityRequest(requests, entityData)
 		end
 	end
 end
-
-
-function FulfillOutputChestRequest(requests)
-	EvenlyDistributeItems(requests, OutputChestInputMethod)
-end
-
-function FulfillOutputTankRequest(requests)
-	EvenlyDistributeItems(requests, OutputTankInputMethod)
-end
-
-function FulfillOutputElectricityRequest(requests)
-	EvenlyDistributeItems(requests, OutputElectricityinputMethod)
-end
-
 
 function OutputChestInputMethod(request, itemName, evenShareOfItems)
 	if request.storage.valid then
@@ -648,8 +636,8 @@ function OutputElectricityinputMethod(request, _, evenShare)
 end
 
 
-function ArrayToLinkedListOfRequests(array, shouldSort)
-	local linkedList = CreateDoublyLinkedList()
+function PrepareRequests(array, shouldSort)
+	local requests = { pos = 0 }
 	for itemName, requestInfo in pairs(array) do
 		if shouldSort then
 			--To be able to distribute it fairly, the requesters need to be sorted in order of how
@@ -665,11 +653,11 @@ function ArrayToLinkedListOfRequests(array, shouldSort)
 			local request = requestInfo.requesters[i]
 			request.itemName = itemName
 			request.requestedAmount = requestInfo.requestedAmount
-			AddLink(linkedList, request, 0)
+			table.insert(requests, request)
 		end
 	end
 
-	return linkedList
+	return requests
 end
 
 function AddRequestToTable(requests, itemName, missingAmount, storage)
@@ -1008,23 +996,6 @@ function processElemGui(event, toUpdateConfigName)--VERY WIP
 	end
 end
 
-script.on_event(defines.events.on_gui_value_changed, function(event)
-	if event.element.name=="clusterio-Placing-Bounding-Box-X" then
-		global.config.PlacableAreaX=event.element.slider_value
-		local placeableAreaString = global.config.PlacableAreaX
-		if placeableAreaString == 0 then placeableAreaString="none" end
-
-		event.element.parent["clusterio-Placing-Bounding-Box-Label-X"].caption="Chest/fluid bounding box X: "..placeableAreaString
-	end
-	if event.element.name=="clusterio-Placing-Bounding-Box-Y" then
-		global.config.PlacableAreaY=event.element.slider_value
-		local placeableAreaString = global.config.PlacableAreaY
-		if placeableAreaString == 0 then placeableAreaString="none" end
-
-		event.element.parent["clusterio-Placing-Bounding-Box-Label-Y"].caption="Chest/fluid bounding box Y: "..placeableAreaString
-	end
-end)
-
 function toggleMainConfigGui(parent)
 	if parent["clusterio-main-config-gui"] then
         parent["clusterio-main-config-gui"].destroy()
@@ -1034,10 +1005,6 @@ function toggleMainConfigGui(parent)
 	local pane = parent.add{type = "frame", name = "clusterio-main-config-gui", direction = "vertical"}
 	pane.add{type = "button", name = "clusterio-Item-WB-list", caption = "Item White/Black list"}
     pane.add{type = "button", name = "clusterio-Fluid-WB-list", caption = "Fluid White/Black list"}
-	pane.add{type = "label" , name = "clusterio-Placing-Bounding-Box-Label-X", caption = "Chest/fluid bounding box X: "..global.config.PlacableAreaX}
-	pane.add{type = "slider", name = "clusterio-Placing-Bounding-Box-X", minimum_value = 0, maximum_value = 800, value = global.config.PlacableAreaX}
-	pane.add{type = "label" , name = "clusterio-Placing-Bounding-Box-Label-Y", caption = "Chest/fluid bounding box Y: "..global.config.PlacableAreaY}
-	pane.add{type = "slider", name = "clusterio-Placing-Bounding-Box-Y", minimum_value = 0, maximum_value = 800, value = global.config.PlacableAreaY}
 
 	--Electricity panel
 	local electricityPane = pane.add{type = "frame", name = "clusterio-main-config-gui", direction = "horizontal"}
@@ -1146,5 +1113,60 @@ script.on_event(defines.events.on_player_joined_game,function(event)
 		end
 
 		makeConfigButton(mod_gui.get_button_flow(game.players[event.player_index]))
+	end
+end)
+
+script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
+	local player = game.players[event.player_index]
+	if not player or not player.valid then
+		return
+	end
+
+	local restrictionEnabled = settings.global["subspace_storage-range-restriction-enabled"].value
+	local drawZone = false
+	if restrictionEnabled then
+		local stack = player.cursor_stack
+		if stack and stack.valid and stack.valid_for_read then
+			local name = stack.name
+			if
+				name == "subspace-item-injector"
+				or name == "subspace-item-extractor"
+				or name == "subspace-fluid-injector"
+				or name == "subspace-fluid-extractor"
+				or name == "subspace-electricity-injector"
+				or name == "subspace-electricity-extractor"
+			then
+				drawZone = true
+			end
+		end
+	end
+
+	if drawZone then
+		if not global.zoneDraw[event.player_index] then
+			local spawn = player.force.get_spawn_position(player.surface)
+			local x0 = spawn.x
+			local y0 = spawn.y
+
+			local width = settings.global["subspace_storage-zone-width"].value
+			local height = settings.global["subspace_storage-zone-height"].value
+			if width == 0 then width = 2000000 end
+			if height == 0 then height = 2000000 end
+
+			global.zoneDraw[event.player_index] = rendering.draw_rectangle {
+				color = {r=0.8 , g=0.1, b=0},
+				width = 12,
+				filled = false,
+				left_top = {x0 - width / 2, y0 - height / 2},
+				right_bottom = {x0 + width / 2, y0 + height / 2},
+				surface = player.surface,
+				players = {player},
+				draw_on_ground = true,
+			}
+		end
+	else
+		if global.zoneDraw[event.player_index] then
+			rendering.destroy(global.zoneDraw[event.player_index])
+			global.zoneDraw[event.player_index] = nil
+		end
 	end
 end)
