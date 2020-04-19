@@ -1,9 +1,22 @@
 ---------------------------------------------------------------------------------------------------
-Version: 2.0.0
+Version: 1.99.2
+  Features:
+    - New placeholder artwork for the subspace interactors.
+  Changes:
+    - subspace item, fluid, and electricity interactors are now all 8x8 in size.
+  Buxfixes:
+    - Fixed item extractor showing out of logistics network icon.
+    - Fixed fluid duplication in extractors.
+---------------------------------------------------------------------------------------------------
+Version: 1.99.1
+  Features:
+    - Added back support for Factorio 0.18.
+---------------------------------------------------------------------------------------------------
+Version: 1.99.0
   Changes:
     - Renamed mod to Subspace Storage.
     - Ported to Clusterio 2.0.
-    - Added support for both 0.17 and 0.18.
+    - Reverted back to supporting Factorio 0.17.
 ---------------------------------------------------------------------------------------------------
 Version: 1.17.1
 Date: 03. 10. 2020

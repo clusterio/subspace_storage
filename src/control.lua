@@ -28,7 +28,7 @@ function OnBuiltEntity(event)
 	local name = entity.name
 	if name == "entity-ghost" then name = entity.ghost_name end
 
-	if ENTITY_TELEPORTATION_RESTRICTION and (name == INPUT_CHEST_NAME or name == OUTPUT_CHEST_NAME or name == INPUT_TANK_NAME or name == OUTPUT_TANK_NAME) then
+	if ENTITY_TELEPORTATION_RESTRICTION and (name == "subspace-item-injector" or name == "subspace-item-extractor" or name == "subspace-fluid-injector" or name == "subspace-fluid-extractor") then
 		if ((global.config.PlacableAreaX == 0 or (x < global.config.PlacableAreaX and x > 0-global.config.PlacableAreaX)) and
 		    (global.config.PlacableAreaY == 0 or (y < global.config.PlacableAreaY and y > 0-global.config.PlacableAreaY))) then
 			--only add entities that are not ghosts
@@ -74,26 +74,26 @@ function AddEntities(entities)
 end
 
 function AddEntity(entity)
-	if entity.name == INPUT_CHEST_NAME then
+	if entity.name == "subspace-item-injector" then
 		--add the chests to a lists if these chests so they can be interated over
 		AddLink(global.inputChestsData.entitiesData, {
 			entity = entity,
 			inv = entity.get_inventory(defines.inventory.chest)
 		}, entity.unit_number)
-	elseif entity.name == OUTPUT_CHEST_NAME then
+	elseif entity.name == "subspace-item-extractor" then
 		--add the chests to a lists if these chests so they can be interated over
 		AddLink(global.outputChestsData.entitiesData, {
 			entity = entity,
 			inv = entity.get_inventory(defines.inventory.chest),
 			filterCount = entity.prototype.filter_count
 		}, entity.unit_number)
-	elseif entity.name == INPUT_TANK_NAME then
+	elseif entity.name == "subspace-fluid-injector" then
 		--add the chests to a lists if these chests so they can be interated over
 		AddLink(global.inputTanksData.entitiesData, {
 			entity = entity,
 			fluidbox = entity.fluidbox
 		}, entity.unit_number)
-	elseif entity.name == OUTPUT_TANK_NAME then
+	elseif entity.name == "subspace-fluid-extractor" then
 		--add the chests to a lists if these chests so they can be interated over
 		AddLink(global.outputTanksData.entitiesData, {
 			entity = entity,
@@ -104,9 +104,9 @@ function AddEntity(entity)
 	elseif entity.name == INV_COMBINATOR_NAME then
 		global.invControls[entity.unit_number] = entity.get_or_create_control_behavior()
 		entity.operable=false
-	elseif entity.name == INPUT_ELECTRICITY_NAME then
+	elseif entity.name == "subspace-electricity-injector" then
 		AddLink(global.inputElectricityData.entitiesData, entity, entity.unit_number)
-	elseif entity.name == OUTPUT_ELECTRICITY_NAME then
+	elseif entity.name == "subspace-electricity-extractor" then
 		AddLink(global.outputElectricityData.entitiesData, {
 			entity = entity,
 			bufferSize = entity.electric_buffer_size
@@ -118,19 +118,19 @@ function OnKilledEntity(event)
 	local entity = event.entity
 	if entity.type ~= "entity-ghost" then
 		--remove the entities from the tables as they are dead
-		if entity.name == INPUT_CHEST_NAME then
+		if entity.name == "subspace-item-injector" then
 			RemoveLink(global.inputChestsData.entitiesData, entity.unit_number)
-		elseif entity.name == OUTPUT_CHEST_NAME then
+		elseif entity.name == "subspace-item-extractor" then
 			RemoveLink(global.outputChestsData.entitiesData, entity.unit_number)
-		elseif entity.name == INPUT_TANK_NAME then
+		elseif entity.name == "subspace-fluid-injector" then
 			RemoveLink(global.inputTanksData.entitiesData, entity.unit_number)
-		elseif entity.name == OUTPUT_TANK_NAME then
+		elseif entity.name == "subspace-fluid-extractor" then
 			RemoveLink(global.outputTanksData.entitiesData, entity.unit_number)
 		elseif entity.name == INV_COMBINATOR_NAME then
 			global.invControls[entity.unit_number] = nil
-		elseif entity.name == INPUT_ELECTRICITY_NAME then
+		elseif entity.name == "subspace-electricity-injector" then
 			RemoveLink(global.inputElectricityData.entitiesData, entity.unit_number)
-		elseif entity.name == OUTPUT_ELECTRICITY_NAME then
+		elseif entity.name == "subspace-electricity-extractor" then
 			RemoveLink(global.outputElectricityData.entitiesData, entity.unit_number)
 		end
 	end
@@ -266,13 +266,13 @@ function Reset()
 
 	AddAllEntitiesOfNames(
 	{
-		INPUT_CHEST_NAME,
-		OUTPUT_CHEST_NAME,
-		INPUT_TANK_NAME,
-		OUTPUT_TANK_NAME,
+		"subspace-item-injector",
+		"subspace-item-extractor",
+		"subspace-fluid-injector",
+		"subspace-fluid-extractor",
 		INV_COMBINATOR_NAME,
-		INPUT_ELECTRICITY_NAME,
-		OUTPUT_ELECTRICITY_NAME
+		"subspace-electricity-injector",
+		"subspace-electricity-extractor"
 	})
 end
 
