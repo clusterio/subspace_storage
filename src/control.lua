@@ -317,7 +317,7 @@ script.on_event(defines.events.on_tick, function(event)
 			if global.workTick == 0 then
 				ResetRequestGathering()
 			end
-			RetrieveGetterRequests(global.allowedToMakeElectricityRequests, TICKS_TO_COLLECT_REQUESTS + global.workTick)
+			RetrieveGetterRequests(global.allowedToMakeElectricityRequests, TICKS_TO_COLLECT_REQUESTS - global.workTick)
 		elseif global.workTick >= TICKS_TO_COLLECT_REQUESTS and global.workTick < TICKS_TO_COLLECT_REQUESTS + TICKS_TO_FULFILL_REQUESTS then
 			if global.workTick == TICKS_TO_COLLECT_REQUESTS then
 				UpdateUseableStorage()
