@@ -6,6 +6,7 @@ const klaw = require("klaw");
 const path = require("path");
 const yargs = require("yargs");
 const child_process = require("child_process");
+const util = require("util");
 
 
 async function exec(file, args) {
@@ -35,6 +36,14 @@ async function main() {
 		})
 		.argv
 	;
+
+	// Warn on modified files being present in the src/ directory.
+	let status = await util.promisify(child_process.exec)("git status --porcelain");
+	for (let line of status.stdout.split("\n")) {
+		if (line.slice(3, 6).startsWith("src")) {
+			console.warn(`Warning: ${line.slice(3)} is unclean`);
+		}
+	}
 
 	if (args.render) {
 		await exec(
