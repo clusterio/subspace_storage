@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.99.4
+  Bugfixes:
+    - Fixed extractors failing to request items from master.
+---------------------------------------------------------------------------------------------------
 Version: 1.99.2
   Features:
     - New placeholder artwork for the subspace interactors.
