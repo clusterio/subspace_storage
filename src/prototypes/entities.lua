@@ -16,7 +16,7 @@ local function subspace_interactor_entity(options)
 		max_health = 500,
 		corpse = nil,
 		dying_explosion = nil,
-		collision_box = {{-3.85, -3.85}, {3.85, 3.85}},
+		collision_box = {{-3.7, -3.7}, {3.7, 3.7}},
 		selection_box = {{-4, -4}, {4, 4}},
 		damaged_trigger_effect = steel_chest.damaged_trigger_effect,
 		resistances = {

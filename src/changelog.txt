@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------------------------------
 Version: 1.99.6
+  Changes:
+    - Adjusted collision box to allow walking between subspace interactors.
   Bugfixes:
     - Fixed extractors and injectors randomly stop working when others are removes elsewhere.
 ---------------------------------------------------------------------------------------------------
