@@ -115,7 +115,7 @@ function AddEntity(entity)
 end
 
 function RemoveEntity(list, entity)
-	for _, v in ipairs(list) do
+	for i, v in ipairs(list) do
 		if v.entity == entity then
 			table.remove(list, i)
 			break

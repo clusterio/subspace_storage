@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.99.6
+  Bugfixes:
+    - Fixed extractors and injectors randomly stop working when others are removes elsewhere.
+---------------------------------------------------------------------------------------------------
 Version: 1.99.4
   Bugfixes:
     - Fixed extractors failing to request items from master.
