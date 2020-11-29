@@ -26,12 +26,10 @@ async function main() {
 			'render': { describe: "Render assets", type: 'boolean', default: false },
 			'post': { describe: "Post process assets", type: 'boolean', default: false },
 			'clean': { describe: "Remove previous builds", type: 'boolean', default: false },
-			'build': { describe: "Build mod", type: 'boolean', default: true },
+			'build': { describe: "Build mod(s)", type: 'boolean', default: true },
 			'pack': { describe: "Pack into zip file", type: 'boolean', default: true },
 			'source-dir': { describe: "Path to mod source directory", nargs: 1, type: 'string', default: "src" },
-			'output-dir': { describe: "Path to output built mod", nargs: 1, type: 'string', default: "dist" },
-			'bump-patch': { describe: "Increment patch number of build", type: 'boolean', default: false },
-			'factorio-version': { describe: "Override factorio_version", type: 'string' },
+			'output-dir': { describe: "Path to output built mod(s)", nargs: 1, type: 'string', default: "dist" },
 			'blender-path': { describe: "Path to blender", type: 'string', default: 'blender' },
 		})
 		.argv
@@ -65,17 +63,6 @@ async function main() {
 	}
 
 	let info = JSON.parse(await fs.readFile(path.join(args.sourceDir, "info.json")));
-
-	if (args.bumpPatch) {
-		let [major, minor, patch] = info.version.split(".");
-		patch = String(Number.parseInt(patch, 10) + 1);
-		info.version = [major, minor, patch].join(".");
-	}
-
-	if (args.factorioVersion) {
-		info.factorio_version = args.factorioVersion;
-	}
-
 	if (args.clean) {
 		let splitter = /^(.*)_(\d+\.\d+\.\d+)(\.zip)?$/
 		for (let entry of await fs.readdir(args.outputDir)) {
@@ -91,6 +78,21 @@ async function main() {
 		}
 	}
 
+	if (info.variants) {
+		for (let [variant, variantOverrides] of Object.entries(info.variants)) {
+			let variantInfo = {
+				...info,
+				...variantOverrides,
+			}
+			delete variantInfo.variants;
+			await buildMod(args, variantInfo);
+		}
+	} else {
+		await buildMod(args, info);
+	}
+}
+
+async function buildMod(args, info) {
 	if (args.build) {
 		await fs.ensureDir(args.outputDir);
 		let modName = `${info.name}_${info.version}`;
@@ -108,6 +110,16 @@ async function main() {
 					}
 				});
 			await events.once(walker, 'end');
+
+			for (let [fileName, pathParts] of Object.entries(info.additional_files) || []) {
+				let filePath = path.join(args.sourceDir, ...pathParts);
+				if (!await fs.pathExists(filePath)) {
+					throw new Error(`Additional file ${filePath} does not exist`);
+				}
+				zip.file(path.posix.join(modName, fileName), fs.createReadStream(filePath));
+			}
+			delete info.additional_files;
+
 			zip.file(path.posix.join(modName, "info.json"), JSON.stringify(info, null, 4));
 
 			let modPath = path.join(args.outputDir, `${modName}.zip`);
@@ -123,6 +135,12 @@ async function main() {
 			}
 			console.log(`Building ${modDir}`);
 			await fs.copy(args.sourceDir, modDir);
+			for (let [fileName, pathParts] of Object.entries(info.additional_files) || []) {
+				let filePath = path.join(...pathParts);
+				await fs.copy(filePath, path.join(modDir, fileName));
+			}
+			delete info.additional_files;
+
 			await fs.writeFile(path.join(modDir, "info.json"), JSON.stringify(info, null, 4));
 		}
 	}
