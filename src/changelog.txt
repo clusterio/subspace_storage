@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------------------------------
-Version: 1.99.7
+Version: 1.99.6
   Changes:
     - Adjusted collision box to allow walking between subspace interactors.
     - Added support for Factorio 1.1.
