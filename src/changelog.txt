@@ -6,6 +6,7 @@ Version: 1.99.7
     - Item extractors have unlimited request slots in Factorio 1.1.
   Bugfixes:
     - Fixed extractors and injectors randomly stop working when others are removes elsewhere.
+    - Fixed interactors not accepting circuit wire connections.
 ---------------------------------------------------------------------------------------------------
 Version: 1.99.4
   Bugfixes:
