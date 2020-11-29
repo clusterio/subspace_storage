@@ -1,8 +1,10 @@
 require("util")
 require("config")
-require("mod-gui")
+local mod_gui = require("mod-gui")
 
 local clusterio_api = require("__clusterio_lib__/api")
+
+local compat = require("compat")
 
 
 ------------------------------------------------------------
@@ -528,7 +530,7 @@ function GetOutputChestRequest(requests, entityData)
 	--as that just leads to unnecessary bot work
 	if entity.valid and not entity.to_be_deconstructed(entity.force) then
 		--Go though each request slot
-		for i = 1, filterCount do
+		for i = 1, compat.version_ge(1, 1) and entity.request_slot_count or filterCount do
 			local requestItem = entity.get_request_slot(i)
 
 			--Some request slots may be empty and some items are not allowed
@@ -837,7 +839,7 @@ function UpdateInvCombinators()
 
 	for i,invControl in pairs(global.invControls) do
 		if invControl.valid then
-			invControl.parameters={parameters=invframe}
+			compat.set_parameters(invControl, invframe)
 			invControl.enabled=true
 		end
 	end
