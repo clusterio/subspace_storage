@@ -826,7 +826,9 @@ function UpdateInvCombinators()
 	local fluids = game.fluid_prototypes
 	local virtuals = game.virtual_signal_prototypes
 	if global.invdata then
-		for name,count in pairs(global.invdata) do
+		for name, count in pairs(global.invdata) do
+			-- Combinator signals are limited to a max value of 2^31-1
+			count = math.min(count, 0x7fffffff)
 			if virtuals[name] then
 				invframe[#invframe+1] = {count=count,index=#invframe+1,signal={name=name,type="virtual"}}
 			elseif fluids[name] then
