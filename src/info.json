@@ -1,10 +1,10 @@
 {
     "name": "clusterio",
-    "version": "1.17.1",
+    "version": "1.18.0",
     "title": "Clusterio",
     "author": "Danielv123 & Keyboardhack & justarandomgeek & AreYouScared & psihius & Godmave",
     "contact": "danielv@live.no",
     "homepage": "https://github.com/clusterio/factorioClusterio",
     "description": "Allows transfer of items, fluids, research and signals between servers. *Server owners, see https://github.com/clusterio/factorioClusterio for installation instructions*",
-    "factorio_version": "0.18"
+    "factorio_version": "1.1"
 }

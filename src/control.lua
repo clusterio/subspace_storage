@@ -1,6 +1,6 @@
 require("util")
 require("config")
-require("mod-gui")
+local mod_gui = require("mod-gui")
 require("LinkedList")
 
 ------------------------------------------------------------
@@ -82,7 +82,6 @@ function AddEntity(entity)
 		AddLink(global.outputChestsData.entitiesData, {
 			entity = entity,
 			inv = entity.get_inventory(defines.inventory.chest),
-			filterCount = entity.prototype.filter_count
 		}, entity.unit_number)
 	elseif entity.name == INPUT_TANK_NAME then
 		--add the chests to a lists if these chests so they can be interated over
@@ -517,12 +516,11 @@ end
 function GetOutputChestRequest(requests, entityData)
 	local entity = entityData.entity
 	local chestInventory = entityData.inv
-	local filterCount = entityData.filterCount
 	--Don't insert items into the chest if it's being deconstructed
 	--as that just leads to unnecessary bot work
 	if entity.valid and not entity.to_be_deconstructed(entity.force) then
 		--Go though each request slot
-		for i = 1, filterCount do
+		for i = 1, entity.request_slot_count do
 			local requestItem = entity.get_request_slot(i)
 
 			--Some request slots may be empty and some items are not allowed
@@ -832,7 +830,7 @@ function UpdateInvCombinators()
 
 	for i,invControl in pairs(global.invControls) do
 		if invControl.valid then
-			invControl.parameters={parameters=invframe}
+			invControl.parameters=invframe
 			invControl.enabled=true
 		end
 	end
