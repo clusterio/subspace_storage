@@ -85,7 +85,6 @@ function AddEntity(entity)
 		table.insert(global.outputChestsData.entitiesData, {
 			entity = entity,
 			inv = entity.get_inventory(defines.inventory.chest),
-			filterCount = entity.prototype.filter_count
 		})
 	elseif entity.name == "subspace-fluid-injector" then
 		--add the chests to a lists if these chests so they can be interated over
@@ -525,12 +524,11 @@ end
 function GetOutputChestRequest(requests, entityData)
 	local entity = entityData.entity
 	local chestInventory = entityData.inv
-	local filterCount = entityData.filterCount
 	--Don't insert items into the chest if it's being deconstructed
 	--as that just leads to unnecessary bot work
 	if entity.valid and not entity.to_be_deconstructed(entity.force) then
 		--Go though each request slot
-		for i = 1, compat.version_ge(1, 1) and entity.request_slot_count or filterCount do
+		for i = 1, entity.request_slot_count do
 			local requestItem = entity.get_request_slot(i)
 
 			--Some request slots may be empty and some items are not allowed
