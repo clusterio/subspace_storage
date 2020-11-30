@@ -111,7 +111,7 @@ async function buildMod(args, info) {
 				});
 			await events.once(walker, 'end');
 
-			for (let [fileName, pathParts] of Object.entries(info.additional_files) || []) {
+			for (let [fileName, pathParts] of Object.entries(info.additional_files || {})) {
 				let filePath = path.join(args.sourceDir, ...pathParts);
 				if (!await fs.pathExists(filePath)) {
 					throw new Error(`Additional file ${filePath} does not exist`);
