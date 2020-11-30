@@ -5,7 +5,7 @@ function compat.set_parameters(combinator, parameters)
 end
 
 function compat.version_ge(major, minor)
-	return major > 0 or major == 0 and minor >= 17
+	return major == 0 and minor <= 17
 end
 
 return compat

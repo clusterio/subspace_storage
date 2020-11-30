@@ -100,7 +100,7 @@ subspace_interactor_entity {
 		type = "logistic-container",
 		inventory_size = 60,
 		logistic_mode = "buffer",
-		logistic_slots_count = compat.version_ge(1, 1) and 18 or nil,
+		logistic_slots_count = not compat.version_ge(1, 1) and 18 or nil,
 		render_not_in_network_icon = false,
 		open_sound = steel_chest.open_sound,
 		close_sound = steel_chest.open_sound,
