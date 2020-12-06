@@ -1,8 +1,10 @@
 require("util")
 require("config")
-require("mod-gui")
+local mod_gui = require("mod-gui")
 
 local clusterio_api = require("__clusterio_lib__/api")
+
+local compat = require("compat")
 
 
 ------------------------------------------------------------
@@ -83,7 +85,6 @@ function AddEntity(entity)
 		table.insert(global.outputChestsData.entitiesData, {
 			entity = entity,
 			inv = entity.get_inventory(defines.inventory.chest),
-			filterCount = entity.prototype.filter_count
 		})
 	elseif entity.name == "subspace-fluid-injector" then
 		--add the chests to a lists if these chests so they can be interated over
@@ -115,7 +116,7 @@ function AddEntity(entity)
 end
 
 function RemoveEntity(list, entity)
-	for _, v in ipairs(list) do
+	for i, v in ipairs(list) do
 		if v.entity == entity then
 			table.remove(list, i)
 			break
@@ -523,12 +524,11 @@ end
 function GetOutputChestRequest(requests, entityData)
 	local entity = entityData.entity
 	local chestInventory = entityData.inv
-	local filterCount = entityData.filterCount
 	--Don't insert items into the chest if it's being deconstructed
 	--as that just leads to unnecessary bot work
 	if entity.valid and not entity.to_be_deconstructed(entity.force) then
 		--Go though each request slot
-		for i = 1, filterCount do
+		for i = 1, entity.request_slot_count do
 			local requestItem = entity.get_request_slot(i)
 
 			--Some request slots may be empty and some items are not allowed
@@ -824,7 +824,9 @@ function UpdateInvCombinators()
 	local fluids = game.fluid_prototypes
 	local virtuals = game.virtual_signal_prototypes
 	if global.invdata then
-		for name,count in pairs(global.invdata) do
+		for name, count in pairs(global.invdata) do
+			-- Combinator signals are limited to a max value of 2^31-1
+			count = math.min(count, 0x7fffffff)
 			if virtuals[name] then
 				invframe[#invframe+1] = {count=count,index=#invframe+1,signal={name=name,type="virtual"}}
 			elseif fluids[name] then
@@ -837,7 +839,7 @@ function UpdateInvCombinators()
 
 	for i,invControl in pairs(global.invControls) do
 		if invControl.valid then
-			invControl.parameters={parameters=invframe}
+			compat.set_parameters(invControl, invframe)
 			invControl.enabled=true
 		end
 	end

@@ -1,3 +1,4 @@
+local compat = require("compat")
 local icons = require("entity_icons")
 local pictures = require("entity_pictures")
 
@@ -5,6 +6,27 @@ local pictures = require("entity_pictures")
 -- We copy certain properties from the vanilla steel chest and storage tank
 local steel_chest = data.raw["container"]["steel-chest"]
 local storage_tank = data.raw["storage-tank"]["storage-tank"]
+
+-- Circuit connector helpers are defined in lualib/circuit-connector-sprites
+-- but due to the shared lua env for data stage it just exists as a global.
+local connector_definition = { variation = 25, main_offset = {1.875, 1}, shadow_offset = {4.5, 2.5625} }
+local interactor_circuit_connector_1_way = circuit_connector_definitions.create(
+	universal_connector_template,
+	{
+		connector_definition,
+	}
+)
+
+local interactor_circuit_connector_4_way = circuit_connector_definitions.create(
+	universal_connector_template,
+	{
+		connector_definition,
+		connector_definition,
+		connector_definition,
+		connector_definition,
+	}
+)
+
 
 local function subspace_interactor_entity(options)
 	local entity = {
@@ -16,7 +38,7 @@ local function subspace_interactor_entity(options)
 		max_health = 500,
 		corpse = nil,
 		dying_explosion = nil,
-		collision_box = {{-3.85, -3.85}, {3.85, 3.85}},
+		collision_box = {{-3.7, -3.7}, {3.7, 3.7}},
 		selection_box = {{-4, -4}, {4, 4}},
 		damaged_trigger_effect = steel_chest.damaged_trigger_effect,
 		resistances = {
@@ -25,10 +47,14 @@ local function subspace_interactor_entity(options)
 		},
 		fast_replaceable_group = "subspace-interactor",
 		vehicle_impact_sound = steel_chest.vehicle_impact_sound,
-		circuit_wire_connection_point = nil,
-		circuit_connector_sprites = nil,
-		circuit_wire_max_distance = nil,
 	}
+
+	if options.circuit_connector then
+		entity.circuit_wire_connection_points = options.circuit_connector.points
+		entity.circuit_wire_connection_point = options.circuit_connector.points
+		entity.circuit_connector_sprites = options.circuit_connector.sprites
+		entity.circuit_wire_max_distance = 9
+	end
 
 	for key, value in pairs(options.entity_properties) do
 		entity[key] = value
@@ -74,7 +100,7 @@ subspace_interactor_entity {
 		type = "logistic-container",
 		inventory_size = 60,
 		logistic_mode = "buffer",
-		logistic_slots_count = 18,
+		logistic_slots_count = not compat.version_ge(1, 1) and 18 or nil,
 		render_not_in_network_icon = false,
 		open_sound = steel_chest.open_sound,
 		close_sound = steel_chest.open_sound,
@@ -82,6 +108,7 @@ subspace_interactor_entity {
 		opened_duration = logistic_chest_opened_duration,
 		picture = pictures["subspace-item-extractor"],
 	},
+	circuit_connector = interactor_circuit_connector_1_way,
 }
 
 subspace_interactor_entity {
@@ -95,6 +122,7 @@ subspace_interactor_entity {
 		close_sound = steel_chest.open_sound,
 		picture = pictures["subspace-item-injector"],
 	},
+	circuit_connector = interactor_circuit_connector_1_way,
 }
 
 subspace_interactor_entity {
@@ -132,6 +160,7 @@ subspace_interactor_entity {
 		close_sound = storage_tank.close_sound,
 		water_reflection = nil,
 	},
+	circuit_connector = interactor_circuit_connector_4_way,
 }
 
 subspace_interactor_entity {
@@ -209,7 +238,8 @@ subspace_interactor_entity {
 		close_sound = storage_tank.close_sound,
 		working_sound = nil,
 		default_output_signal = {type = "virtual", name = "signal-A"},
-	}
+	},
+	circuit_connector = interactor_circuit_connector_1_way,
 }
 
 subspace_interactor_entity {

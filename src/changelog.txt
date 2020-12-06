@@ -1,4 +1,14 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.99.6
+  Changes:
+    - Adjusted collision box to allow walking between subspace interactors.
+    - Added support for Factorio 1.1.
+    - Item extractors have unlimited request slots in Factorio 1.1.
+  Bugfixes:
+    - Fixed extractors and injectors randomly stop working when others are removes elsewhere.
+    - Fixed interactors not accepting circuit wire connections.
+    - Fixed inventory combinator breaking when more than 2^31-1 itemes were stored.
+---------------------------------------------------------------------------------------------------
 Version: 1.99.4
   Bugfixes:
     - Fixed extractors failing to request items from master.
