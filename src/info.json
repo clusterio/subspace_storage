@@ -19,7 +19,7 @@
     ],
     "title": "Subspace Storage (Alpha)",
     "author": "Clusterio Team",
-    "homepage": "https://github.com/clusterio/factorioClusterio",
+    "homepage": "https://github.com/clusterio/subspace_storage",
     "description": "Allows storing items and fluids in a limitless shared subspace.  Warning: work in progress alpha.",
     "dependencies": [
         "base",
