@@ -3,8 +3,8 @@ Subspace Storage Factorio Mod
 
 **Warning:** this is a work in progress alpha and may not work as advertised.
 
-Allows storing items and fluid into a limitless subspace that is shared across the game world.
-With Clusterio you can also share the subspace across a cluster of servers, enabling item and fluid production to be spread across multiple servers.
+Allows storing items and fluid into a limitless subspace that is shared across servers via Clusterio.
+Currently requires Clusterio to work see [the repository and README for Clusterio](https://github.com/clusterio/clusterio) for instructions on setting it up.
 
 
 Build Instructions
