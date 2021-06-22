@@ -1,6 +1,6 @@
 {
   "name": "subspace_storage",
-  "repository": "https://github.com/clusterio/factorioClusterioMod",
+  "repository": "https://github.com/clusterio/subspace_storage",
   "license": "MIT",
   "engines": {
     "node": ">=10"
