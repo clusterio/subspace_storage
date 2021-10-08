@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.99.9
+  Changes:
+    - Optimized (Updated by ZwerOxotnik)
+---------------------------------------------------------------------------------------------------
 Version: 1.99.6
   Changes:
     - Adjusted collision box to allow walking between subspace interactors.
