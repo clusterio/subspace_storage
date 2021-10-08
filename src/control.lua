@@ -174,7 +174,7 @@ local function ExportOutputList()
 	end
 end
 
-local function Import(data)
+function Import(data)
 	local items = game.json_to_table(data)
 	for _, item in ipairs(items) do
 		GiveItemsToStorage(item[1], item[2])
@@ -215,7 +215,7 @@ local function UpdateInvCombinators()
 	end
 end
 
-local function UpdateInvData(data, full)
+function UpdateInvData(data, full)
 	if full then
 		global.invdata = {}
 	end
@@ -477,7 +477,7 @@ end
 ------------------------------
 --[[Thing resetting events]]--
 ------------------------------
-local function Reset()
+function Reset()
 	global.ticksSinceMasterPinged = 601
 	global.isConnected = false
 	global.prevIsConnected = false
