@@ -1189,10 +1189,10 @@ local mod_settings = {
 		restrictionEnabled = value
 	end,
 	["subspace_storage-zone-height"] = function(value)
-		restrictionEnabled = value
+		zoneHeight = value
 	end,
 	["subspace_storage-zone-width"] = function(value)
-		restrictionEnabled = value
+		zoneWidth = value
 	end
 }
 script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
