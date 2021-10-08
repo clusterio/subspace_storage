@@ -1161,15 +1161,24 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
 			local x0 = spawn.x
 			local y0 = spawn.y
 
-			if zoneWidth == 0 then zoneWidth = 2000000 end
-			if zoneHeight == 0 then zoneHeight = 2000000 end
+			local width, height
+			if zoneWidth == 0 then
+				width = 2000000 / 2
+			else
+				width = zoneWidth / 2
+			end
+			if zoneHeight == 0 then
+				height = 2000000 / 2
+			else
+				height = zoneHeight / 2
+			end
 
 			zoneDraw[event.player_index] = rendering.draw_rectangle{
 				color = ZONE_COLOR,
-				zoneWidth = 12,
+				width = 12,
 				filled = false,
-				left_top = {x0 - zoneWidth / 2, y0 - zoneHeight / 2},
-				right_bottom = {x0 + zoneWidth / 2, y0 + zoneHeight / 2},
+				left_top = {x0 - width, y0 - height},
+				right_bottom = {x0 + width, y0 + height},
 				surface = player.surface,
 				players = {player},
 				draw_on_ground = true,
