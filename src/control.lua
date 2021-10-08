@@ -628,7 +628,7 @@ local function PrepareToFulfillRequests()
 	global.outputElectricityData.requestsLL = PrepareRequests(global.outputElectricityData.requests, false)
 end
 
-local	function iterator(state, pos)
+local function iterator(state, pos)
 	if pos >= state.endpoint or pos >= #state.list then
 		return nil, nil
 	end
