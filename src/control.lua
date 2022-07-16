@@ -7,6 +7,16 @@ local clusterio_api = require("__clusterio_lib__/api")
 local compat = require("compat")
 
 
+-- Entities which are not allowed to be placed outside the restriction zone
+local restrictedEntities = {
+	["subspace-item-injector"] = true,
+	["subspace-item-extractor"] = true,
+	["subspace-fluid-injector"] = true,
+	["subspace-fluid-extractor"] = true,
+	["subspace-electricity-injector"] = true,
+	["subspace-electricity-extractor"] = true,
+}
+
 ------------------------------------------------------------
 --[[Method that handle creation and deletion of entities]]--
 ------------------------------------------------------------
@@ -30,7 +40,7 @@ function OnBuiltEntity(event)
 	if name == "entity-ghost" then name = entity.ghost_name end
 
 	local restrictionEnabled = settings.global["subspace_storage-range-restriction-enabled"].value
-	if restrictionEnabled and (name == "subspace-item-injector" or name == "subspace-item-extractor" or name == "subspace-fluid-injector" or name == "subspace-fluid-extractor") then
+	if restrictionEnabled and restrictedEntities[name] then
 		local width = settings.global["subspace_storage-zone-width"].value
 		local height = settings.global["subspace_storage-zone-height"].value
 		if ((width == 0 or (math.abs(x) < width / 2)) and (height == 0 or (math.abs(y) < height / 2))) then
@@ -1132,15 +1142,7 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
 	if restrictionEnabled then
 		local stack = player.cursor_stack
 		if stack and stack.valid and stack.valid_for_read then
-			local name = stack.name
-			if
-				name == "subspace-item-injector"
-				or name == "subspace-item-extractor"
-				or name == "subspace-fluid-injector"
-				or name == "subspace-fluid-extractor"
-				or name == "subspace-electricity-injector"
-				or name == "subspace-electricity-extractor"
-			then
+			if restrictedEntities[stack.name] then
 				drawZone = true
 			end
 		end

@@ -6,6 +6,7 @@ Date: ??. ??. ????
   Bugfixes:
     - Fixed broken fluid extractor fluid icons when fluids used the icon property.
     - Fixed crash on large instance ids by clamping them to [-2^31, 2^31-1] in the inventory combinator.
+    - Fixed being able to place eletricity interactors outside the restriction zone.
 ---------------------------------------------------------------------------------------------------
 Version: 1.99.6
   Changes:
