@@ -1145,6 +1145,10 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
 			if restrictedEntities[stack.name] then
 				drawZone = true
 			end
+		elseif player.cursor_ghost then
+			if restrictedEntities[player.cursor_ghost.name] then
+				drawZone = true
+			end
 		end
 	end
 
