@@ -30,7 +30,7 @@ Version: 1.99.2
   Changes:
     - subspace item, fluid, and electricity interactors are now all 8x8 in size.
     - Moved injector and extractor range restriction config to Factorio's built-in mod settings.
-  Buxfixes:
+  Bugfixes:
     - Fixed item extractor showing out of logistics network icon.
     - Fixed fluid duplication in extractors.
     - Fixed reset iterating over every entity in the game.
@@ -57,7 +57,7 @@ Version: 1.17.0
 Date: 01. 26. 2020
   Features:
     - Now supported on 0.18.
-  Buxfixes:
+  Bugfixes:
     - Fixed fluid icons being the wrong sizes due to icon_size change.
 ---------------------------------------------------------------------------------------------------
 Version: 1.16.0
