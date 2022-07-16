@@ -105,15 +105,25 @@ data:extend{
 
 -- Inventory Combinator
 local inv = table.deepcopy(data.raw["constant-combinator"]["constant-combinator"])
+local tint = { r = 100, g = 200, b = 255, a = 255 }
 inv.name = INV_COMBINATOR_NAME
 inv.minable.result = INV_COMBINATOR_NAME
 inv.item_slot_count = 2000
+for _, sprite in pairs(inv.sprites) do
+	sprite.layers[1].tint = tint
+	sprite.layers[1].hr_version.tint = tint
+end
 data:extend{
 	inv,
 	{
 		type = "item",
 		name = INV_COMBINATOR_NAME,
-		icon = inv.icon,
+		icons = {
+			{
+				icon = inv.icon,
+				tint = tint,
+			}
+		},
 		icon_size = inv.icon_size,
 		flags = {},
 		subgroup = "signal-subgroup",
