@@ -817,6 +817,9 @@ function UpdateInvCombinators()
 	local invframe = {}
 	local instance_id = clusterio_api.get_instance_id()
 	if instance_id then
+		-- Clamp to 32-bit to avoid error raised by Factorio
+		instance_id = math.min(instance_id, 0x7fffffff)
+		instance_id = math.max(instance_id, -0x80000000)
 		table.insert(invframe,{count=instance_id,index=#invframe+1,signal={name="signal-localid",type="virtual"}})
 	end
 
