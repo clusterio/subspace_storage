@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.99.9
+Date: ??. ??. ????
+  Changes:
+    - Hidden fluids no longer show up in fluid extractor interface.
+  Bugfixes:
+    - Fixed broken fluid extractor fluid icons when fluids used the icon property.
+---------------------------------------------------------------------------------------------------
 Version: 1.99.6
   Changes:
     - Adjusted collision box to allow walking between subspace interactors.
