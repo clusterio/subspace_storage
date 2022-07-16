@@ -934,6 +934,9 @@ function GiveItemsToStorage(itemName, itemCount)
 end
 
 function AddItemToInputList(itemName, itemCount)
+	if global.hasInfiniteResources then
+		return
+	end
 	global.inputList[itemName] = (global.inputList[itemName] or 0) + itemCount
 end
 
