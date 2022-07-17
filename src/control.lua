@@ -53,12 +53,35 @@ function OnBuiltEntity(event)
 				-- Tell the player what is happening
 				if player then player.print("Subspace interactor outside allowed area (placed at x "..x.." y "..y.." out of allowed "..(width > 0 and width or "inf").. " x "..(height > 0 and height or "inf")..")") end
 				-- kill entity, try to give it back to the player though
-				if not player.mine_entity(entity, true) then
-					entity.destroy()
+				if compat.version_ge(1, 0) then
+					local inventory = game.create_inventory(1)
+					entity.mine {
+						inventory = inventory,
+						force = true,
+					}
+					if inventory[1].valid_for_read then
+						local player_inventory = player.get_main_inventory()
+						if player_inventory then
+							local removed = player_inventory.insert(inventory[1])
+							inventory[1].count = inventory[1].count - removed
+						end
+						if inventory[1].valid_for_read then
+							player.surface.spill_item_stack(player.position, inventory[1])
+						end
+					end
+					inventory.destroy()
+				else
+					if not player.mine_entity(entity, true) then
+						entity.destroy()
+					end
 				end
 			else
 				-- it wasn't placed by a player, we can't tell em whats wrong
-				entity.destroy()
+				if compat.version_ge(1, 0) then
+					entity.mine()
+				else
+					entity.destroy()
+				end
 			end
 		end
 	else

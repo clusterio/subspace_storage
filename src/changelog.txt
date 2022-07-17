@@ -10,6 +10,7 @@ Date: ??. ??. ????
     - Fixed being able to place eletricity interactors outside the restriction zone.
     - Fixed restricton zone not being displayed when holding a interactor ghost.
     - Fixed resources getting exported to the cluster when infinity mode is enabled.
+    - Fixed placing interactor outside of restriction area breaking undo.
 ---------------------------------------------------------------------------------------------------
 Version: 1.99.6
   Changes:
