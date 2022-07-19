@@ -75,7 +75,7 @@ local function subspace_interactor_entity(options)
 			icon = icons[options.name],
 			icon_size = 64, icon_mipmaps = 4,
 			subgroup = options.subgroup,
-			order = "a[items]-b[" .. options.name .. "]",
+			order = options.order,
 			place_result = options.name,
 			stack_size = options.stack_size or 50,
 		},
@@ -95,7 +95,8 @@ local standard_recipe = {
 subspace_interactor_entity {
 	name = "subspace-item-extractor",
 	ingredients = standard_recipe,
-	subgroup = "chest-subgroup",
+	subgroup = "subspace_storage-interactor",
+	order = "b[extractor]-a[subspace-item-extractor]",
 	entity_properties = {
 		type = "logistic-container",
 		inventory_size = 60,
@@ -114,7 +115,8 @@ subspace_interactor_entity {
 subspace_interactor_entity {
 	name = "subspace-item-injector",
 	ingredients = standard_recipe,
-	subgroup = "chest-subgroup",
+	subgroup = "subspace_storage-interactor",
+	order = "a[injector]-a[subspace-item-injector]",
 	entity_properties = {
 		type = "container",
 		inventory_size = 60,
@@ -128,7 +130,8 @@ subspace_interactor_entity {
 subspace_interactor_entity {
 	name = "subspace-fluid-injector",
 	ingredients = standard_recipe,
-	subgroup = "liquid-subgroup",
+	subgroup = "subspace_storage-interactor",
+	order = "a[injector]-b[subspace-fluid-injector]",
 	entity_properties = {
 		type = "storage-tank",
 		fluid_box = {
@@ -166,7 +169,8 @@ subspace_interactor_entity {
 subspace_interactor_entity {
 	name = "subspace-fluid-extractor",
 	ingredients = standard_recipe,
-	subgroup = "liquid-subgroup",
+	subgroup = "subspace_storage-interactor",
+	order = "b[extractor]-b[subspace-fluid-extractor]",
 	entity_properties = {
 		type = "assembling-machine",
 		fluid_boxes = {
@@ -215,7 +219,8 @@ subspace_interactor_entity {
 		{"satellite", 1}
 	},
 	requester_paste_multiplier = 1,
-	subgroup = "electric-subgroup",
+	subgroup = "subspace_storage-interactor",
+	order = "a[injector]-c[subspace-electricity-injector]",
 	stack_size = 5,
 	entity_properties = {
 		type = "accumulator",
@@ -251,7 +256,8 @@ subspace_interactor_entity {
 		{"satellite", 1}
 	},
 	requester_paste_multiplier = 1,
-	subgroup = "electric-subgroup",
+	subgroup = "subspace_storage-interactor",
+	order = "b[extractor]-c[subspace-electricity-extractor]",
 	stack_size = 5,
 	entity_properties = {
 		type = "accumulator",

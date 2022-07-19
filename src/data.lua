@@ -28,37 +28,11 @@ end
 data:extend(
 {
 	{
-		type = "item-group",
-		name = "test-group",
-		icon = "__subspace_storage__/graphics/tech.png",
-		icon_size = 128,
-		inventory_order = "f",
-		order = "e"
-	},
-	{
 		type = "item-subgroup",
-		name = "chest-subgroup",
-		group = "test-group",
-		order = "a"
+		name = "subspace_storage-interactor",
+		group = "logistics",
+		order = "g-subspace_storage", -- After logistic-network
 	},
-	{
-		type = "item-subgroup",
-		name = "liquid-subgroup",
-		group = "test-group",
-		order = "b"
-	},
-	{
-		type = "item-subgroup",
-		name = "signal-subgroup",
-		group = "test-group",
-		order = "c"
-	},
-	{
-		type = "item-subgroup",
-		name = "electric-subgroup",
-		group = "test-group",
-		order = "d"
-	}
 })
 
 data:extend(
@@ -126,9 +100,9 @@ data:extend{
 		},
 		icon_size = inv.icon_size,
 		flags = {},
-		subgroup = "signal-subgroup",
+		subgroup = "subspace_storage-interactor",
 		place_result=INV_COMBINATOR_NAME,
-		order = "a[items]-b["..INV_COMBINATOR_NAME.."]",
+		order = "c[" .. INV_COMBINATOR_NAME .. "]",
 		stack_size = 50,
 	},
 	{
