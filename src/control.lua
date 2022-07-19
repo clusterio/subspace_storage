@@ -273,8 +273,13 @@ function Reset()
 	for name, entry in pairs(global.useableItemStorage) do
 		if not entry.remainingItems then
 			global.useableItemStorage[name] = nil
-		elseif not entry.initialItemCount then
-			entry.initialItemCount = entry.remainingItems
+		else
+			if not entry.initialItemCount then
+				entry.initialItemCount = entry.remainingItems
+			end
+			if not entry.lastPull then
+				entry.lastPull = game.tick
+			end
 		end
 	end
 
@@ -398,6 +403,19 @@ script.on_event(defines.events.on_tick, function(event)
 		global.isConnected = false
 	end
 	global.prevIsConnected = global.isConnected
+end)
+
+-- Return items stuck in useableItemStorage
+script.on_nth_tick(60*60, function(event)
+	if not global.hasInfiniteResources then
+		local staleTick = game.tick - 60 * 60
+		for itemName, entry in pairs(global.useableItemStorage) do
+			if entry.lastPull < staleTick and entry.remainingItems > 0 then
+				AddItemToInputList(itemName, entry.remainingItems)
+				entry.remainingItems = 0
+			end
+		end
+	end
 end)
 
 function UpdateUseableStorage()
@@ -931,6 +949,7 @@ function RequestItemsFromUseableStorage(itemName, itemCount)
 	--requested then take the number of items there are left otherwise take the requested amount
 	local itemsTakenFromStorage = math.min(global.useableItemStorage[itemName].remainingItems, itemCount)
 	global.useableItemStorage[itemName].remainingItems = global.useableItemStorage[itemName].remainingItems - itemsTakenFromStorage
+	global.useableItemStorage[itemName].lastPull = game.tick
 
 	return itemsTakenFromStorage
 end
@@ -956,7 +975,8 @@ function GiveItemsToUseableStorage(itemName, itemCount)
 		global.useableItemStorage[itemName] =
 		{
 			initialItemCount = 0,
-			remainingItems = 0
+			remainingItems = 0,
+			lastPull = game.tick,
 		}
 	end
 	global.useableItemStorage[itemName].remainingItems = global.useableItemStorage[itemName].remainingItems + itemCount

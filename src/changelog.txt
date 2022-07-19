@@ -12,6 +12,7 @@ Date: ??. ??. ????
     - Fixed resources getting exported to the cluster when infinity mode is enabled.
     - Fixed placing interactor outside of restriction area breaking undo.
     - Fixed item extractor being able to request more items than can fit its storage, leaving the overflow in an infinite hidden buffer.
+    - Fixed hidden buffer storing requested items that were not put into an extractor forever.
 ---------------------------------------------------------------------------------------------------
 Version: 1.99.6
   Changes:
