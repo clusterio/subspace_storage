@@ -1,4 +1,19 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.99.9
+Date: ??. ??. ????
+  Changes:
+    - Hidden fluids no longer show up in fluid extractor interface.
+    - Tinted the inventory combinator to distinguish it from the constant combinator.
+  Bugfixes:
+    - Fixed broken fluid extractor fluid icons when fluids used the icon property.
+    - Fixed crash on large instance ids by clamping them to [-2^31, 2^31-1] in the inventory combinator.
+    - Fixed being able to place eletricity interactors outside the restriction zone.
+    - Fixed restricton zone not being displayed when holding a interactor ghost.
+    - Fixed resources getting exported to the cluster when infinity mode is enabled.
+    - Fixed placing interactor outside of restriction area breaking undo.
+    - Fixed item extractor being able to request more items than can fit its storage, leaving the overflow in an infinite hidden buffer.
+    - Fixed hidden buffer storing requested items that were not put into an extractor forever.
+---------------------------------------------------------------------------------------------------
 Version: 1.99.6
   Changes:
     - Adjusted collision box to allow walking between subspace interactors.
@@ -20,7 +35,7 @@ Version: 1.99.2
   Changes:
     - subspace item, fluid, and electricity interactors are now all 8x8 in size.
     - Moved injector and extractor range restriction config to Factorio's built-in mod settings.
-  Buxfixes:
+  Bugfixes:
     - Fixed item extractor showing out of logistics network icon.
     - Fixed fluid duplication in extractors.
     - Fixed reset iterating over every entity in the game.
@@ -47,7 +62,7 @@ Version: 1.17.0
 Date: 01. 26. 2020
   Features:
     - Now supported on 0.18.
-  Buxfixes:
+  Bugfixes:
     - Fixed fluid icons being the wrong sizes due to icon_size change.
 ---------------------------------------------------------------------------------------------------
 Version: 1.16.0

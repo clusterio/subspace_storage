@@ -7,6 +7,16 @@ local clusterio_api = require("__clusterio_lib__/api")
 local compat = require("compat")
 
 
+-- Entities which are not allowed to be placed outside the restriction zone
+local restrictedEntities = {
+	["subspace-item-injector"] = true,
+	["subspace-item-extractor"] = true,
+	["subspace-fluid-injector"] = true,
+	["subspace-fluid-extractor"] = true,
+	["subspace-electricity-injector"] = true,
+	["subspace-electricity-extractor"] = true,
+}
+
 ------------------------------------------------------------
 --[[Method that handle creation and deletion of entities]]--
 ------------------------------------------------------------
@@ -30,7 +40,7 @@ function OnBuiltEntity(event)
 	if name == "entity-ghost" then name = entity.ghost_name end
 
 	local restrictionEnabled = settings.global["subspace_storage-range-restriction-enabled"].value
-	if restrictionEnabled and (name == "subspace-item-injector" or name == "subspace-item-extractor" or name == "subspace-fluid-injector" or name == "subspace-fluid-extractor") then
+	if restrictionEnabled and restrictedEntities[name] then
 		local width = settings.global["subspace_storage-zone-width"].value
 		local height = settings.global["subspace_storage-zone-height"].value
 		if ((width == 0 or (math.abs(x) < width / 2)) and (height == 0 or (math.abs(y) < height / 2))) then
@@ -43,12 +53,35 @@ function OnBuiltEntity(event)
 				-- Tell the player what is happening
 				if player then player.print("Subspace interactor outside allowed area (placed at x "..x.." y "..y.." out of allowed "..(width > 0 and width or "inf").. " x "..(height > 0 and height or "inf")..")") end
 				-- kill entity, try to give it back to the player though
-				if not player.mine_entity(entity, true) then
-					entity.destroy()
+				if compat.version_ge(1, 0) then
+					local inventory = game.create_inventory(1)
+					entity.mine {
+						inventory = inventory,
+						force = true,
+					}
+					if inventory[1].valid_for_read then
+						local player_inventory = player.get_main_inventory()
+						if player_inventory then
+							local removed = player_inventory.insert(inventory[1])
+							inventory[1].count = inventory[1].count - removed
+						end
+						if inventory[1].valid_for_read then
+							player.surface.spill_item_stack(player.position, inventory[1])
+						end
+					end
+					inventory.destroy()
+				else
+					if not player.mine_entity(entity, true) then
+						entity.destroy()
+					end
 				end
 			else
 				-- it wasn't placed by a player, we can't tell em whats wrong
-				entity.destroy()
+				if compat.version_ge(1, 0) then
+					entity.mine()
+				else
+					entity.destroy()
+				end
 			end
 		end
 	else
@@ -234,7 +267,21 @@ function Reset()
 	global.outputList = {}
 	global.inputList = {}
 	global.itemStorage = {}
-	global.useableItemStorage = {}
+	if not global.useableItemStorage then
+		global.useableItemStorage = {}
+	end
+	for name, entry in pairs(global.useableItemStorage) do
+		if not entry.remainingItems then
+			global.useableItemStorage[name] = nil
+		else
+			if not entry.initialItemCount then
+				entry.initialItemCount = entry.remainingItems
+			end
+			if not entry.lastPull then
+				entry.lastPull = game.tick
+			end
+		end
+	end
 
 	global.inputChestsData =
 	{
@@ -356,6 +403,19 @@ script.on_event(defines.events.on_tick, function(event)
 		global.isConnected = false
 	end
 	global.prevIsConnected = global.isConnected
+end)
+
+-- Return items stuck in useableItemStorage
+script.on_nth_tick(60*60, function(event)
+	if not global.hasInfiniteResources then
+		local staleTick = game.tick - 60 * 60
+		for itemName, entry in pairs(global.useableItemStorage) do
+			if entry.lastPull < staleTick and entry.remainingItems > 0 then
+				AddItemToInputList(itemName, entry.remainingItems)
+				entry.remainingItems = 0
+			end
+		end
+	end
 end)
 
 function UpdateUseableStorage()
@@ -527,6 +587,7 @@ function GetOutputChestRequest(requests, entityData)
 	--Don't insert items into the chest if it's being deconstructed
 	--as that just leads to unnecessary bot work
 	if entity.valid and not entity.to_be_deconstructed(entity.force) then
+		local slotsLeft = 60
 		--Go though each request slot
 		for i = 1, entity.request_slot_count do
 			local requestItem = entity.get_request_slot(i)
@@ -538,7 +599,11 @@ function GetOutputChestRequest(requests, entityData)
 
 				--If there isn't enough items in the chest
 				local missingAmount = requestItem.count - itemsInChest
+				--But don't request more than the chest can hold
+				local stackSize = game.item_prototypes[requestItem.name].stack_size
+				missingAmount = math.min(missingAmount, slotsLeft * stackSize)
 				if missingAmount > 0 then
+					slotsLeft = slotsLeft - math.ceil(missingAmount / stackSize)
 					local entry = AddRequestToTable(requests, requestItem.name, missingAmount, entity)
 					entry.inv = chestInventory
 				end
@@ -817,6 +882,9 @@ function UpdateInvCombinators()
 	local invframe = {}
 	local instance_id = clusterio_api.get_instance_id()
 	if instance_id then
+		-- Clamp to 32-bit to avoid error raised by Factorio
+		instance_id = math.min(instance_id, 0x7fffffff)
+		instance_id = math.max(instance_id, -0x80000000)
 		table.insert(invframe,{count=instance_id,index=#invframe+1,signal={name="signal-localid",type="virtual"}})
 	end
 
@@ -881,6 +949,7 @@ function RequestItemsFromUseableStorage(itemName, itemCount)
 	--requested then take the number of items there are left otherwise take the requested amount
 	local itemsTakenFromStorage = math.min(global.useableItemStorage[itemName].remainingItems, itemCount)
 	global.useableItemStorage[itemName].remainingItems = global.useableItemStorage[itemName].remainingItems - itemsTakenFromStorage
+	global.useableItemStorage[itemName].lastPull = game.tick
 
 	return itemsTakenFromStorage
 end
@@ -906,7 +975,8 @@ function GiveItemsToUseableStorage(itemName, itemCount)
 		global.useableItemStorage[itemName] =
 		{
 			initialItemCount = 0,
-			remainingItems = 0
+			remainingItems = 0,
+			lastPull = game.tick,
 		}
 	end
 	global.useableItemStorage[itemName].remainingItems = global.useableItemStorage[itemName].remainingItems + itemCount
@@ -921,6 +991,9 @@ function GiveItemsToStorage(itemName, itemCount)
 end
 
 function AddItemToInputList(itemName, itemCount)
+	if global.hasInfiniteResources then
+		return
+	end
 	global.inputList[itemName] = (global.inputList[itemName] or 0) + itemCount
 end
 
@@ -1129,15 +1202,11 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
 	if restrictionEnabled then
 		local stack = player.cursor_stack
 		if stack and stack.valid and stack.valid_for_read then
-			local name = stack.name
-			if
-				name == "subspace-item-injector"
-				or name == "subspace-item-extractor"
-				or name == "subspace-fluid-injector"
-				or name == "subspace-fluid-extractor"
-				or name == "subspace-electricity-injector"
-				or name == "subspace-electricity-extractor"
-			then
+			if restrictedEntities[stack.name] then
+				drawZone = true
+			end
+		elseif player.cursor_ghost then
+			if restrictedEntities[player.cursor_ghost.name] then
 				drawZone = true
 			end
 		end
