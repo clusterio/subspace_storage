@@ -11,6 +11,7 @@ Date: ??. ??. ????
     - Fixed restricton zone not being displayed when holding a interactor ghost.
     - Fixed resources getting exported to the cluster when infinity mode is enabled.
     - Fixed placing interactor outside of restriction area breaking undo.
+    - Fixed item extractor being able to request more items than can fit its storage, leaving the overflow in an infinite hidden buffer.
 ---------------------------------------------------------------------------------------------------
 Version: 1.99.6
   Changes:

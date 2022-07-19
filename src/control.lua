@@ -569,6 +569,7 @@ function GetOutputChestRequest(requests, entityData)
 	--Don't insert items into the chest if it's being deconstructed
 	--as that just leads to unnecessary bot work
 	if entity.valid and not entity.to_be_deconstructed(entity.force) then
+		local slotsLeft = 60
 		--Go though each request slot
 		for i = 1, entity.request_slot_count do
 			local requestItem = entity.get_request_slot(i)
@@ -580,7 +581,11 @@ function GetOutputChestRequest(requests, entityData)
 
 				--If there isn't enough items in the chest
 				local missingAmount = requestItem.count - itemsInChest
+				--But don't request more than the chest can hold
+				local stackSize = game.item_prototypes[requestItem.name].stack_size
+				missingAmount = math.min(missingAmount, slotsLeft * stackSize)
 				if missingAmount > 0 then
+					slotsLeft = slotsLeft - math.ceil(missingAmount / stackSize)
 					local entry = AddRequestToTable(requests, requestItem.name, missingAmount, entity)
 					entry.inv = chestInventory
 				end
