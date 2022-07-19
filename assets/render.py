@@ -51,8 +51,8 @@ for model in models:
 # Render the models
 scene.world = bpy.data.worlds["World"]
 for model in models:
-    render_subspace_interactor("Red", model, f"//../render/{model.lower()}-extractor.png")
-    render_subspace_interactor("Blue", model, f"//../render/{model.lower()}-injector.png")
+    render_subspace_interactor("Blue", model, f"//../render/{model.lower()}-extractor.png")
+    render_subspace_interactor("Purple", model, f"//../render/{model.lower()}-injector.png")
 
 # Render the shadows
 for obj in scene.objects:
