@@ -267,7 +267,16 @@ function Reset()
 	global.outputList = {}
 	global.inputList = {}
 	global.itemStorage = {}
-	global.useableItemStorage = {}
+	if not global.useableItemStorage then
+		global.useableItemStorage = {}
+	end
+	for name, entry in pairs(global.useableItemStorage) do
+		if not entry.remainingItems then
+			global.useableItemStorage[name] = nil
+		elseif not entry.initialItemCount then
+			entry.initialItemCount = entry.remainingItems
+		end
+	end
 
 	global.inputChestsData =
 	{
