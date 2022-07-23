@@ -4,6 +4,8 @@ Date: ??. ??. ????
   Changes:
     - Hidden fluids no longer show up in fluid extractor interface.
     - Tinted the inventory combinator to distinguish it from the constant combinator.
+    - Removed Clusterio item group and moved the interactor recipies to be under the logistic-network recipies.
+    - Recoloured interactors to match the Active Provider Chest and Requester Chest since their function is similar to those.
   Bugfixes:
     - Fixed broken fluid extractor fluid icons when fluids used the icon property.
     - Fixed crash on large instance ids by clamping them to [-2^31, 2^31-1] in the inventory combinator.
