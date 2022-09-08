@@ -22,4 +22,11 @@ data:extend {
 		minimum_value = 0,
 		default_value = 400,
 	},
+	{
+		type = "bool-setting",
+		name = "subspace_storage-infinity-mode",
+		setting_type = "runtime-global",
+		order = "c1",
+		default_value = false,
+	},
 }
