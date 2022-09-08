@@ -241,6 +241,11 @@ script.on_configuration_changed(function(data)
 			settings.global["subspace_storage-infinity-mode"] = { value = global.hasInfiniteResources }
 			global.hasInfiniteResources = nil
 		end
+		if global.maxElectricity ~= nil then
+			log("Migrating global.maxElectricity = " .. tostring(global.maxElectricity))
+			settings.global["subspace_storage-max-electricity"] = { value = global.maxElectricity }
+			global.maxElectricity = nil
+		end
 		Reset()
 	end
 end)
@@ -320,7 +325,6 @@ function Reset()
 		requestsLL = nil
 	}
 	global.lastElectricityUpdate = 0
-	global.maxElectricity = 100000000000000 / ELECTRICITY_RATIO --100TJ assuming a ratio of 1.000.000
 
 	global.invControls = {}
 
@@ -570,7 +574,13 @@ end
 
 function HandleInputElectricity(entityData)
 	--if there is too much energy in the network then stop outputting more
-	if global.invdata and global.invdata[ELECTRICITY_ITEM_NAME] and global.invdata[ELECTRICITY_ITEM_NAME] >= global.maxElectricity then
+	local limit = settings.global["subspace_storage-max-electricity"].value
+	if
+		limit >= 0
+		and global.invdata
+		and global.invdata[ELECTRICITY_ITEM_NAME]
+		and global.invdata[ELECTRICITY_ITEM_NAME] >= limit
+	then
 		return
 	end
 
@@ -1084,11 +1094,6 @@ function toggleMainConfigGui(parent)
 	local pane = parent.add{type = "frame", name = "clusterio-main-config-gui", direction = "vertical"}
 	pane.add{type = "button", name = "clusterio-Item-WB-list", caption = "Item White/Black list"}
     pane.add{type = "button", name = "clusterio-Fluid-WB-list", caption = "Fluid White/Black list"}
-
-	--Electricity panel
-	local electricityPane = pane.add{type = "frame", name = "clusterio-main-config-gui", direction = "horizontal"}
-	electricityPane.add{type = "label", name = "clusterio-electricity-label", caption = "Max electricity"}
-	electricityPane.add{type = "textfield", name = "clusterio-electricity-field", text = global.maxElectricity}
 end
 
 function processMainConfigGui(event)
@@ -1145,13 +1150,6 @@ end)
 script.on_event(defines.events.on_gui_text_changed, function(event)
 	if not (event.element and event.element.valid) then
 		return
-	end
-
-	if event.element.name == "clusterio-electricity-field" then
-		local newMax = tonumber(event.element.text)
-		if newMax and newMax >= 0 then
-			global.maxElectricity = newMax
-		end
 	end
 end)
 

@@ -4,6 +4,7 @@ Date: 08. 09. 2022
   Features:
     - Added Chinese locale.
   Changes:
+    - Moved Max Electricity option to a map setting.
     - Moved Infinity Mode toggle to a map setting.
 ---------------------------------------------------------------------------------------------------
 Version: 1.99.9
