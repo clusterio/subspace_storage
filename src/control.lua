@@ -51,7 +51,12 @@ function OnBuiltEntity(event)
 		else
 			if player and player.valid then
 				-- Tell the player what is happening
-				if player then player.print("Subspace interactor outside allowed area (placed at x "..x.." y "..y.." out of allowed "..(width > 0 and width or "inf").. " x "..(height > 0 and height or "inf")..")") end
+				if player then
+					player.print({
+						"subspace_storage.placed-outside-allowed-area", x, y,
+						width > 0 and width or "inf", height > 0 and height or "inf"
+					})
+				end
 				-- kill entity, try to give it back to the player though
 				if compat.version_ge(1, 0) then
 					local inventory = game.create_inventory(1)
@@ -1052,8 +1057,8 @@ function toggleBWItemListGui(parent)
     end
 
 	local pane = parent.add{type = "frame", name = "clusterio-black-white-item-list-config", direction = "vertical"}
-	pane.add{type = "label", caption = "Item"}
-	pane.add{type = "checkbox", name = "clusterio-is-item-whitelist", caption = "whitelist", state = global.config.item_is_whitelist}
+	pane.add{type = "label", caption = {"subspace_storage.item"}}
+	pane.add{type = "checkbox", name = "clusterio-is-item-whitelist", caption = {"subspace_storage.whitelist"}, state = global.config.item_is_whitelist}
 	createElemGui_INTERNAL(pane, "item-black-white-list", "item", global.config.BWitems)
 end
 
@@ -1064,8 +1069,8 @@ function toggleBWFluidListGui(parent)
     end
 
 	local pane = parent.add{type = "frame", name = "clusterio-black-white-fluid-list-config", direction = "vertical"}
-	pane.add{type = "label", caption = "Fluid"}
-	pane.add{type = "checkbox", name = "clusterio-is-fluid-whitelist", caption = "whitelist", state = global.config.fluid_is_whitelist}
+	pane.add{type = "label", caption = {"subspace_storage.fluid"}}
+	pane.add{type = "checkbox", name = "clusterio-is-fluid-whitelist", caption = {"subspace_storage.whitelist"}, state = global.config.fluid_is_whitelist}
 	createElemGui_INTERNAL(pane, "fluid-black-white-list", "fluid", global.config.BWfluids)
 end
 
@@ -1092,8 +1097,8 @@ function toggleMainConfigGui(parent)
     end
 
 	local pane = parent.add{type = "frame", name = "clusterio-main-config-gui", direction = "vertical"}
-	pane.add{type = "button", name = "clusterio-Item-WB-list", caption = "Item White/Black list"}
-    pane.add{type = "button", name = "clusterio-Fluid-WB-list", caption = "Fluid White/Black list"}
+	pane.add{type = "button", name = "clusterio-Item-WB-list", caption = {"subspace_storage.item-bw-list"}}
+	pane.add{type = "button", name = "clusterio-Fluid-WB-list", caption = {"subspace_storage.fluid-bw-list"}}
 end
 
 function processMainConfigGui(event)
