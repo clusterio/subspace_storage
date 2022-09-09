@@ -51,7 +51,12 @@ function OnBuiltEntity(event)
 		else
 			if player and player.valid then
 				-- Tell the player what is happening
-				if player then player.print("Subspace interactor outside allowed area (placed at x "..x.." y "..y.." out of allowed "..(width > 0 and width or "inf").. " x "..(height > 0 and height or "inf")..")") end
+				if player then
+					player.print({
+						"subspace_storage.placed-outside-allowed-area", x, y,
+						width > 0 and width or "inf", height > 0 and height or "inf"
+					})
+				end
 				-- kill entity, try to give it back to the player though
 				if compat.version_ge(1, 0) then
 					local inventory = game.create_inventory(1)
@@ -236,6 +241,16 @@ end)
 
 script.on_configuration_changed(function(data)
 	if data.mod_changes and data.mod_changes["subspace_storage"] then
+		if global.hasInfiniteResources ~= nil then
+			log("Migrating global.hasInfiniteResources = " .. tostring(global.hasInfiniteResources))
+			settings.global["subspace_storage-infinity-mode"] = { value = global.hasInfiniteResources }
+			global.hasInfiniteResources = nil
+		end
+		if global.maxElectricity ~= nil then
+			log("Migrating global.maxElectricity = " .. tostring(global.maxElectricity))
+			settings.global["subspace_storage-max-electricity"] = { value = global.maxElectricity }
+			global.maxElectricity = nil
+		end
 		Reset()
 	end
 end)
@@ -246,7 +261,6 @@ function Reset()
 	global.prevIsConnected = false
 	global.allowedToMakeElectricityRequests = false
 	global.workTick = 0
-	global.hasInfiniteResources = false
 
 	if global.config == nil then
 		global.config =
@@ -316,7 +330,6 @@ function Reset()
 		requestsLL = nil
 	}
 	global.lastElectricityUpdate = 0
-	global.maxElectricity = 100000000000000 / ELECTRICITY_RATIO --100TJ assuming a ratio of 1.000.000
 
 	global.invControls = {}
 
@@ -336,7 +349,7 @@ script.on_event(defines.events.on_tick, function(event)
 
 	--If the mod isn't connected then still pretend that it's
 	--so items requests and removals can be fulfilled
-	if global.hasInfiniteResources then
+	if settings.global["subspace_storage-infinity-mode"].value then
 		global.ticksSinceMasterPinged = 0
 	end
 
@@ -407,7 +420,7 @@ end)
 
 -- Return items stuck in useableItemStorage
 script.on_nth_tick(60*60, function(event)
-	if not global.hasInfiniteResources then
+	if not settings.global["subspace_storage-infinity-mode"].value then
 		local staleTick = game.tick - 60 * 60
 		for itemName, entry in pairs(global.useableItemStorage) do
 			if entry.lastPull < staleTick and entry.remainingItems > 0 then
@@ -566,7 +579,13 @@ end
 
 function HandleInputElectricity(entityData)
 	--if there is too much energy in the network then stop outputting more
-	if global.invdata and global.invdata[ELECTRICITY_ITEM_NAME] and global.invdata[ELECTRICITY_ITEM_NAME] >= global.maxElectricity then
+	local limit = settings.global["subspace_storage-max-electricity"].value
+	if
+		limit >= 0
+		and global.invdata
+		and global.invdata[ELECTRICITY_ITEM_NAME]
+		and global.invdata[ELECTRICITY_ITEM_NAME] >= limit
+	then
 		return
 	end
 
@@ -936,7 +955,7 @@ remote.add_interface("clusterio",
 --------------------
 function RequestItemsFromUseableStorage(itemName, itemCount)
 	--if infinite resources then the whole request is approved
-	if global.hasInfiniteResources then
+	if settings.global["subspace_storage-infinity-mode"].value then
 		return itemCount
 	end
 
@@ -960,7 +979,7 @@ function GetInitialItemCount(itemName)
 	--then all entities should get their requests fulfilled-
 	--To simulate that this method returns 1mil which should be enough
 	--for all entities to fulfill their whole item request
-	if global.hasInfiniteResources then
+	if settings.global["subspace_storage-infinity-mode"].value then
 		return 1000000 --1.000.000
 	end
 
@@ -991,7 +1010,7 @@ function GiveItemsToStorage(itemName, itemCount)
 end
 
 function AddItemToInputList(itemName, itemCount)
-	if global.hasInfiniteResources then
+	if settings.global["subspace_storage-infinity-mode"].value then
 		return
 	end
 	global.inputList[itemName] = (global.inputList[itemName] or 0) + itemCount
@@ -1038,8 +1057,8 @@ function toggleBWItemListGui(parent)
     end
 
 	local pane = parent.add{type = "frame", name = "clusterio-black-white-item-list-config", direction = "vertical"}
-	pane.add{type = "label", caption = "Item"}
-	pane.add{type = "checkbox", name = "clusterio-is-item-whitelist", caption = "whitelist", state = global.config.item_is_whitelist}
+	pane.add{type = "label", caption = {"subspace_storage.item"}}
+	pane.add{type = "checkbox", name = "clusterio-is-item-whitelist", caption = {"subspace_storage.whitelist"}, state = global.config.item_is_whitelist}
 	createElemGui_INTERNAL(pane, "item-black-white-list", "item", global.config.BWitems)
 end
 
@@ -1050,8 +1069,8 @@ function toggleBWFluidListGui(parent)
     end
 
 	local pane = parent.add{type = "frame", name = "clusterio-black-white-fluid-list-config", direction = "vertical"}
-	pane.add{type = "label", caption = "Fluid"}
-	pane.add{type = "checkbox", name = "clusterio-is-fluid-whitelist", caption = "whitelist", state = global.config.fluid_is_whitelist}
+	pane.add{type = "label", caption = {"subspace_storage.fluid"}}
+	pane.add{type = "checkbox", name = "clusterio-is-fluid-whitelist", caption = {"subspace_storage.whitelist"}, state = global.config.fluid_is_whitelist}
 	createElemGui_INTERNAL(pane, "fluid-black-white-list", "fluid", global.config.BWfluids)
 end
 
@@ -1078,24 +1097,8 @@ function toggleMainConfigGui(parent)
     end
 
 	local pane = parent.add{type = "frame", name = "clusterio-main-config-gui", direction = "vertical"}
-	pane.add{type = "button", name = "clusterio-Item-WB-list", caption = "Item White/Black list"}
-    pane.add{type = "button", name = "clusterio-Fluid-WB-list", caption = "Fluid White/Black list"}
-
-	--Electricity panel
-	local electricityPane = pane.add{type = "frame", name = "clusterio-main-config-gui", direction = "horizontal"}
-	electricityPane.add{type = "label", name = "clusterio-electricity-label", caption = "Max electricity"}
-	electricityPane.add{type = "textfield", name = "clusterio-electricity-field", text = global.maxElectricity}
-
-	--Infinity mode button
-	addInfinityModeButton(pane)
-end
-
-function addInfinityModeButton(parent)
-	if global.hasInfiniteResources then
-		parent.add{type = "button", name = "clusterio-infinity-button", caption = "Infinity mode enabled "}
-	else
-		parent.add{type = "button", name = "clusterio-infinity-button", caption = "Infinity mode disabled"}
-	end
+	pane.add{type = "button", name = "clusterio-Item-WB-list", caption = {"subspace_storage.item-bw-list"}}
+	pane.add{type = "button", name = "clusterio-Fluid-WB-list", caption = {"subspace_storage.fluid-bw-list"}}
 end
 
 function processMainConfigGui(event)
@@ -1103,15 +1106,6 @@ function processMainConfigGui(event)
 		toggleBWItemListGui(game.players[event.player_index].gui.top)
 	elseif event.element.name == "clusterio-Fluid-WB-list" then
 		toggleBWFluidListGui(game.players[event.player_index].gui.top)
-	elseif event.element.name == "clusterio-infinity-button" then
-		local parent = event.element.parent
-		event.element.destroy()
-		if global.hasInfiniteResources then
-			global.hasInfiniteResources = false
-		else
-			global.hasInfiniteResources = true
-		end
-		addInfinityModeButton(parent)
 	end
 end
 
@@ -1161,13 +1155,6 @@ end)
 script.on_event(defines.events.on_gui_text_changed, function(event)
 	if not (event.element and event.element.valid) then
 		return
-	end
-
-	if event.element.name == "clusterio-electricity-field" then
-		local newMax = tonumber(event.element.text)
-		if newMax and newMax >= 0 then
-			global.maxElectricity = newMax
-		end
 	end
 end)
 
