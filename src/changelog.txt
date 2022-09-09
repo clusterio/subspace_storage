@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------------------------------
 Version: 1.99.12
-Date: 08. 09. 2022
+Date: 09. 09. 2022
   Features:
     - Added Chinese locale.
     - Added ability localize the UI of the mod.
