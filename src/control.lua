@@ -914,12 +914,12 @@ function UpdateInvCombinators()
 		for name, count in pairs(global.invdata) do
 			-- Combinator signals are limited to a max value of 2^31-1
 			count = math.min(count, 0x7fffffff)
-			if virtuals[name] then
-				invframe[#invframe+1] = {count=count,index=#invframe+1,signal={name=name,type="virtual"}}
+			if items[name] then
+				invframe[#invframe+1] = {count=count,index=#invframe+1,signal={name=name,type="item"}}
 			elseif fluids[name] then
 				invframe[#invframe+1] = {count=count,index=#invframe+1,signal={name=name,type="fluid"}}
-			elseif items[name] then
-				invframe[#invframe+1] = {count=count,index=#invframe+1,signal={name=name,type="item"}}
+			elseif virtuals[name] then
+				invframe[#invframe+1] = {count=count,index=#invframe+1,signal={name=name,type="virtual"}}
 			end
 		end
 	end
