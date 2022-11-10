@@ -2,17 +2,17 @@
     "name": "subspace_storage",
     "variants": [
         {
-            "version": "1.99.12",
+            "version": "1.99.15",
             "factorio_version": "0.17",
             "additional_files": { "compat.lua": ["compat", "factorio_0.17.lua"] }
         },
         {
-            "version": "1.99.13",
+            "version": "1.99.16",
             "factorio_version": "1.0",
             "additional_files": { "compat.lua": ["compat", "factorio_1.0.lua"] }
         },
         {
-            "version": "1.99.14",
+            "version": "1.99.17",
             "factorio_version": "1.1",
             "additional_files": { "compat.lua": ["compat", "factorio_1.1.lua"] }
         }

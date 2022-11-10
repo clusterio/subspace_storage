@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.99.15
+Date: ??. ??. ????
+  Bugfixes:
+    - Fixed inventory combinator outputting virtual signals named the same as item or fluid signals.
+---------------------------------------------------------------------------------------------------
 Version: 1.99.12
 Date: 09. 09. 2022
   Features:
