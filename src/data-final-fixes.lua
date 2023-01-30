@@ -7,7 +7,6 @@ for k,v in pairs(data.raw.fluid) do
 			{
 				type = "recipe",
 				name = ("get-"..v.name),
-				icons = v.icons or {{icon = v.icon, icon_size = v.icon_size}},
 				category = CRAFTING_FLUID_CATEGORY_NAME,
 				energy_required = 1,
 				subgroup = "fill-barrel",
