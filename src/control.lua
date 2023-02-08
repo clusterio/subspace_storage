@@ -564,26 +564,13 @@ function HandleInputTank(entityData)
 	if entity.valid then
 		--get the content of the chest
 		local fluid = fluidbox[1]
-		if fluid ~= nil and (fluid.amount) > 0 then
+		if fluid ~= nil and math.floor(fluid.amount) > 0 then
 			if isFluidLegal(fluid.name) then
-				if settings.global["subspace_storage-fluid-empty"].value then
-					if fluid.amount > 0 then
-						local fluid_taken = fluid.amount
-						AddItemToInputList(fluid.name, fluid_taken)
-						fluid.amount = fluid.amount - fluid_taken
-						if fluid.amount == 0 then
-							fluidbox[1] = nil
-						else
-							fluidbox[1] = fluid
-						end
-					end
-				else
-					if fluid.amount > 1 then
-						local fluid_taken = math.ceil(fluid.amount) - 1
-						AddItemToInputList(fluid.name, fluid_taken)
-						fluid.amount = fluid.amount - fluid_taken
-						fluidbox[1] = fluid
-					end
+				if fluid.amount > 1 then
+					local fluid_taken = math.ceil(fluid.amount) - 1
+					AddItemToInputList(fluid.name, fluid_taken)
+					fluid.amount = fluid.amount - fluid_taken
+					fluidbox[1] = fluid
 				end
 			end
 		end

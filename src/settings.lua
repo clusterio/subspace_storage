@@ -38,11 +38,4 @@ data:extend {
 		order = "c1",
 		default_value = false,
 	},
-	{
-		type = "bool-setting",
-		name = "subspace_storage-fluid-empty",
-		setting_type = "runtime-global",
-		order = "d1",
-		default_value = false,
-	},
 }
