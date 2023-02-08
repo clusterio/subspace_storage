@@ -564,13 +564,17 @@ function HandleInputTank(entityData)
 	if entity.valid then
 		--get the content of the chest
 		local fluid = fluidbox[1]
-		if fluid ~= nil and math.floor(fluid.amount) > 0 then
+		if fluid ~= nil and fluid.amount > 0 then
 			if isFluidLegal(fluid.name) then
 				if fluid.amount > 1 then
 					local fluid_taken = math.ceil(fluid.amount) - 1
 					AddItemToInputList(fluid.name, fluid_taken)
 					fluid.amount = fluid.amount - fluid_taken
 					fluidbox[1] = fluid
+				else
+					if entity.get_merged_signal({name="signal-P",type="virtual"}) == 1 then
+						fluidbox[1] = nil
+					end
 				end
 			end
 		end
