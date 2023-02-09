@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.99.18
+Date: ??. ??. ????
+  Features:
+    - Added Fluid Injectors can receive a circuit network signal of P = 1 to purge/void volumes lesser than 1.
+---------------------------------------------------------------------------------------------------
 Version: 1.99.15
 Date: ??. ??. ????
   Bugfixes:
