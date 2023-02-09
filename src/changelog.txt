@@ -1,11 +1,13 @@
 ---------------------------------------------------------------------------------------------------
 Version: 1.99.18
-Date: ??. ??. ????
+Date: 09. 02. 2023
   Features:
     - Added Fluid Injectors can receive a circuit network signal of P = 1 to purge/void volumes lesser than 1.
+  Bugfixes:
+    - Fixed 'Key "icon_size" not found on property tree at ..." error that occurs with some mod combinations.
 ---------------------------------------------------------------------------------------------------
 Version: 1.99.15
-Date: ??. ??. ????
+Date: 16. 11. 2022
   Bugfixes:
     - Fixed inventory combinator outputting virtual signals named the same as item or fluid signals.
 ---------------------------------------------------------------------------------------------------
