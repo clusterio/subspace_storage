@@ -17,46 +17,116 @@ local restrictedEntities = {
 	["subspace-electricity-extractor"] = true,
 }
 
+local inputChestsData       = global.inputChestsData
+local inputElectricityData  = global.inputElectricityData
+local inputTanksData        = global.inputTanksData
+local outputChestsData      = global.outputChestsData
+local outputElectricityData = global.outputElectricityData
+local outputTanksData       = global.outputTanksData
+local useableItemStorage    = global.useableItemStorage
+local invControls           = global.invControls
+
 ------------------------------------------------------------
 --[[Method that handle creation and deletion of entities]]--
 ------------------------------------------------------------
-function OnBuiltEntity(event)
+local function AddEntity(entity)
+	local entity_name = entity.name
+
+	if     entity_name == "subspace-item-injector" then
+		--add the chests to a lists if these chests so they can be interated over
+		table.insert(inputChestsData.entitiesData, {
+			entity = entity,
+			inv = entity.get_inventory(defines.inventory.chest)
+		})
+	elseif entity_name == "subspace-item-extractor" then
+		--add the chests to a lists if these chests so they can be interated over
+		table.insert(outputChestsData.entitiesData, {
+			entity = entity,
+			inv = entity.get_inventory(defines.inventory.chest),
+		})
+	elseif entity_name == "subspace-fluid-injector" then
+		--add the chests to a lists if these chests so they can be interated over
+		table.insert(inputTanksData.entitiesData, {
+			entity = entity,
+			fluidbox = entity.fluidbox
+		})
+	elseif entity_name == "subspace-fluid-extractor" then
+		--add the chests to a lists if these chests so they can be interated over
+		table.insert(outputTanksData.entitiesData, {
+			entity = entity,
+			fluidbox = entity.fluidbox
+		})
+		--previous version made then inactive which isn't desired anymore
+		entity.active = true
+	elseif entity_name == INV_COMBINATOR_NAME then
+		invControls[entity.unit_number] = entity.get_or_create_control_behavior()
+		entity.operable = false
+	elseif entity_name == "subspace-electricity-injector" then
+		table.insert(inputElectricityData.entitiesData, {
+			entity = entity
+		})
+	elseif entity_name == "subspace-electricity-extractor" then
+		table.insert(outputElectricityData.entitiesData, {
+			entity = entity,
+			bufferSize = entity.electric_buffer_size
+		})
+	end
+end
+
+local function AddEntities(entities)
+	for _, entity in pairs(entities) do
+		AddEntity(entity)
+	end
+end
+
+local function AddAllEntitiesOfNames(names)
+	for _, surface in pairs(game.surfaces) do
+		for _, name in ipairs(names) do
+			AddEntities(surface.find_entities_filtered { name = name })
+		end
+	end
+end
+
+local function OnBuiltEntity(event)
 	local entity = event.created_entity
 	if not (entity and entity.valid) then return end
 
-	local player = false
-	if event.player_index then player = game.players[event.player_index] end
-
-	local spawn
-	if player and player.valid then
-		spawn = game.players[event.player_index].force.get_spawn_position(entity.surface)
-	else
-		spawn = game.forces["player"].get_spawn_position(entity.surface)
-	end
-	local x = entity.position.x - spawn.x
-	local y = entity.position.y - spawn.y
-
 	local name = entity.name
-	if name == "entity-ghost" then name = entity.ghost_name end
+	local isPhisicalBody = true
+	if name == "entity-ghost" then
+		name = entity.ghost_name
+		isPhisicalBody = false
+	end
 
-	local restrictionEnabled = settings.global["subspace_storage-range-restriction-enabled"].value
-	if restrictionEnabled and restrictedEntities[name] then
-		local width = settings.global["subspace_storage-zone-width"].value
-		local height = settings.global["subspace_storage-zone-height"].value
-		if ((width == 0 or (math.abs(x) < width / 2)) and (height == 0 or (math.abs(y) < height / 2))) then
-			--only add entities that are not ghosts
-			if entity.type ~= "entity-ghost" then
-				AddEntity(entity)
-			end
+	if not restrictedEntities[name] then
+		-- early return for untracked entities
+		return
+	end
+
+	if global.setting_range_restriction then
+		local spawn
+		local player = false
+
+		if event.player_index then player = game.players[event.player_index] end
+
+		if player and player.valid then
+			spawn = game.players[event.player_index].force.get_spawn_position(entity.surface)
 		else
+			spawn = game.forces.player.get_spawn_position(entity.surface)
+		end
+	
+		local x = entity.position.x - spawn.x
+		local y = entity.position.y - spawn.y
+		local width = global.setting_zone_width
+		local height = global.setting_zone_height
+
+		if not ((width == 0 or (math.abs(x) < width / 2)) and (height == 0 or (math.abs(y) < height / 2))) then
 			if player and player.valid then
 				-- Tell the player what is happening
-				if player then
-					player.print({
-						"subspace_storage.placed-outside-allowed-area", x, y,
-						width > 0 and width or "inf", height > 0 and height or "inf"
-					})
-				end
+				player.print({
+					"subspace_storage.placed-outside-allowed-area", x, y,
+					width > 0 and width or "inf", height > 0 and height or "inf"
+				})
 				-- kill entity, try to give it back to the player though
 				if compat.version_ge(1, 0) then
 					local inventory = game.create_inventory(1)
@@ -88,72 +158,17 @@ function OnBuiltEntity(event)
 					entity.destroy()
 				end
 			end
-		end
-	else
-		--only add entities that are not ghosts
-		if entity.type ~= "entity-ghost" then
-			AddEntity(entity)
+
+			return
 		end
 	end
-end
-
-function AddAllEntitiesOfNames(names)
-	for _, surface in pairs(game.surfaces) do
-		for _, name in ipairs(names) do
-			AddEntities(surface.find_entities_filtered { name = name })
-		end
-	end
-end
-
-function AddEntities(entities)
-	for k, entity in pairs(entities) do
+	-- only add entities that are not ghosts
+	if isPhisicalBody then
 		AddEntity(entity)
 	end
 end
 
-function AddEntity(entity)
-	if entity.name == "subspace-item-injector" then
-		--add the chests to a lists if these chests so they can be interated over
-		table.insert(global.inputChestsData.entitiesData, {
-			entity = entity,
-			inv = entity.get_inventory(defines.inventory.chest)
-		})
-	elseif entity.name == "subspace-item-extractor" then
-		--add the chests to a lists if these chests so they can be interated over
-		table.insert(global.outputChestsData.entitiesData, {
-			entity = entity,
-			inv = entity.get_inventory(defines.inventory.chest),
-		})
-	elseif entity.name == "subspace-fluid-injector" then
-		--add the chests to a lists if these chests so they can be interated over
-		table.insert(global.inputTanksData.entitiesData, {
-			entity = entity,
-			fluidbox = entity.fluidbox
-		})
-	elseif entity.name == "subspace-fluid-extractor" then
-		--add the chests to a lists if these chests so they can be interated over
-		table.insert(global.outputTanksData.entitiesData, {
-			entity = entity,
-			fluidbox = entity.fluidbox
-		})
-		--previous version made then inactive which isn't desired anymore
-		entity.active = true
-	elseif entity.name == INV_COMBINATOR_NAME then
-		global.invControls[entity.unit_number] = entity.get_or_create_control_behavior()
-		entity.operable=false
-	elseif entity.name == "subspace-electricity-injector" then
-		table.insert(global.inputElectricityData.entitiesData, {
-			entity = entity
-		})
-	elseif entity.name == "subspace-electricity-extractor" then
-		table.insert(global.outputElectricityData.entitiesData, {
-			entity = entity,
-			bufferSize = entity.electric_buffer_size
-		})
-	end
-end
-
-function RemoveEntity(list, entity)
+local function RemoveEntity(list, entity)
 	for i, v in ipairs(list) do
 		if v.entity == entity then
 			table.remove(list, i)
@@ -162,61 +177,30 @@ function RemoveEntity(list, entity)
 	end
 end
 
-function OnKilledEntity(event)
+local function OnKilledEntity(event)
 	local entity = event.entity
-	if entity.type ~= "entity-ghost" then
-		--remove the entities from the tables as they are dead
-		if entity.name == "subspace-item-injector" then
-			RemoveEntity(global.inputChestsData.entitiesData, entity)
-		elseif entity.name == "subspace-item-extractor" then
-			RemoveEntity(global.outputChestsData.entitiesData, entity)
-		elseif entity.name == "subspace-fluid-injector" then
-			RemoveEntity(global.inputTanksData.entitiesData, entity)
-		elseif entity.name == "subspace-fluid-extractor" then
-			RemoveEntity(global.outputTanksData.entitiesData, entity)
-		elseif entity.name == INV_COMBINATOR_NAME then
-			global.invControls[entity.unit_number] = nil
-		elseif entity.name == "subspace-electricity-injector" then
-			RemoveEntity(global.inputElectricityData.entitiesData, entity)
-		elseif entity.name == "subspace-electricity-extractor" then
-			RemoveEntity(global.outputElectricityData.entitiesData, entity)
-		end
+	if entity.type == "entity-ghost" then
+		return
+	end
+
+	local entity_name = entity.name
+	--remove the entities from the tables as they are dead
+	if     entity_name == "subspace-item-injector" then
+		RemoveEntity(inputChestsData.entitiesData, entity)
+	elseif entity_name == "subspace-item-extractor" then
+		RemoveEntity(outputChestsData.entitiesData, entity)
+	elseif entity_name == "subspace-fluid-injector" then
+		RemoveEntity(inputTanksData.entitiesData, entity)
+	elseif entity_name == "subspace-fluid-extractor" then
+		RemoveEntity(outputTanksData.entitiesData, entity)
+	elseif entity_name == INV_COMBINATOR_NAME then
+		invControls[entity.unit_number] = nil
+	elseif entity_name == "subspace-electricity-injector" then
+		RemoveEntity(inputElectricityData.entitiesData, entity)
+	elseif entity_name == "subspace-electricity-extractor" then
+		RemoveEntity(outputElectricityData.entitiesData, entity)
 	end
 end
-
-
------------------------------
---[[Thing creation events]]--
------------------------------
-script.on_event(defines.events.on_built_entity, function(event)
-	OnBuiltEntity(event)
-end)
-
-script.on_event(defines.events.on_robot_built_entity, function(event)
-	OnBuiltEntity(event)
-end)
-
-
-----------------------------
---[[Thing killing events]]--
-----------------------------
-script.on_event(defines.events.on_entity_died, function(event)
-	OnKilledEntity(event)
-end)
-
-script.on_event(defines.events.on_robot_pre_mined, function(event)
-	OnKilledEntity(event)
-end)
-
-script.on_event(defines.events.on_pre_player_mined_item, function(event)
-	OnKilledEntity(event)
-end)
-
-script.on_event(defines.events.script_raised_destroy, function(event)
-	OnKilledEntity(event)
-end)
-
-
 
 ------------------------
 --[[Clusterio events]]--
@@ -228,52 +212,44 @@ end
 ------------------------------
 --[[Thing resetting events]]--
 ------------------------------
-script.on_init(function()
-	clusterio_api.init()
-	RegisterClusterioEvents()
-	Reset()
-end)
+local function UpdateSettings()
+	global.setting_infinity_mode     = settings.global["subspace_storage-infinity-mode"].value
+	global.setting_zone_width        = settings.global["subspace_storage-zone-width"].value
+	global.setting_zone_height       = settings.global["subspace_storage-zone-height"].value
+	global.setting_range_restriction = settings.global["subspace_storage-range-restriction-enabled"].value
+	global.setting_max_electricity   = settings.global["subspace_storage-max-electricity"].value
+end
 
-script.on_load(function()
-	clusterio_api.init()
-	RegisterClusterioEvents()
-end)
+local function MakeLocalReferences()
+	inputChestsData       = global.inputChestsData
+	inputElectricityData  = global.inputElectricityData
+	inputTanksData        = global.inputTanksData
+	outputChestsData      = global.outputChestsData
+	outputElectricityData = global.outputElectricityData
+	outputTanksData       = global.outputTanksData
+	useableItemStorage    = global.useableItemStorage
+	invControls           = global.invControls
+end
 
-script.on_configuration_changed(function(data)
-	if data.mod_changes and data.mod_changes["subspace_storage"] then
-		if global.hasInfiniteResources ~= nil then
-			log("Migrating global.hasInfiniteResources = " .. tostring(global.hasInfiniteResources))
-			settings.global["subspace_storage-infinity-mode"] = { value = global.hasInfiniteResources }
-			global.hasInfiniteResources = nil
-		end
-		if global.maxElectricity ~= nil then
-			log("Migrating global.maxElectricity = " .. tostring(global.maxElectricity))
-			settings.global["subspace_storage-max-electricity"] = { value = global.maxElectricity }
-			global.maxElectricity = nil
-		end
-		Reset()
-	end
-end)
-
-function Reset()
+local function Reset()
 	global.ticksSinceMasterPinged = 601
+
 	global.isConnected = false
 	global.prevIsConnected = false
+
 	global.allowedToMakeElectricityRequests = false
+
 	global.workTick = 0
 
-	if global.config == nil then
-		global.config =
-		{
-			BWitems = {},
-			item_is_whitelist = false,
-			BWfluids = {},
-			fluid_is_whitelist = false,
-		}
-	end
-	if global.invdata == nil then
-		global.invdata = {}
-	end
+	global.config = global.config or
+	{
+		BWitems = {},
+		item_is_whitelist = false,
+		BWfluids = {},
+		fluid_is_whitelist = false,
+	}
+
+	global.invdata = global.invdata or {}
 
 	rendering.clear("subspace_storage")
 	global.zoneDraw = {}
@@ -281,12 +257,13 @@ function Reset()
 	global.outputList = {}
 	global.inputList = {}
 	global.itemStorage = {}
-	if not global.useableItemStorage then
-		global.useableItemStorage = {}
-	end
-	for name, entry in pairs(global.useableItemStorage) do
+
+	global.useableItemStorage = global.useableItemStorage or {}
+	useableItemStorage = global.useableItemStorage
+
+	for name, entry in pairs(useableItemStorage) do
 		if not entry.remainingItems then
-			global.useableItemStorage[name] = nil
+			useableItemStorage[name] = nil
 		else
 			if not entry.initialItemCount then
 				entry.initialItemCount = entry.remainingItems
@@ -333,6 +310,8 @@ function Reset()
 
 	global.invControls = {}
 
+	MakeLocalReferences()
+
 	AddAllEntitiesOfNames(
 	{
 		"subspace-item-injector",
@@ -345,136 +324,91 @@ function Reset()
 	})
 end
 
-script.on_event(defines.events.on_tick, function(event)
-
-	--If the mod isn't connected then still pretend that it's
-	--so items requests and removals can be fulfilled
-	if settings.global["subspace_storage-infinity-mode"].value then
-		global.ticksSinceMasterPinged = 0
-	end
-
-	global.ticksSinceMasterPinged = global.ticksSinceMasterPinged + 1
-	if global.ticksSinceMasterPinged < 300 then
-		global.isConnected = true
-
-
-		if global.prevIsConnected == false then
-			global.workTick = 0
-		end
-
-		if global.workTick == 0 then
-			--importing electricity should be limited because it requests so
-			--much at once. If it wasn't limited then the electricity could
-			--make small burst of requests which requests >10x more than it needs
-			--which could temporarily starve other networks.
-			--Updating every 4 seconds give two chances to give electricity in
-			--the 10 second period.
-			local timeSinceLastElectricityUpdate = game.tick - global.lastElectricityUpdate
-			global.allowedToMakeElectricityRequests = timeSinceLastElectricityUpdate > 60 * 3.5
-		end
-
-		--First retrieve requests and then fulfill them
-		if global.workTick >= 0 and global.workTick < TICKS_TO_COLLECT_REQUESTS then
-			if global.workTick == 0 then
-				ResetRequestGathering()
-			end
-			RetrieveGetterRequests(global.allowedToMakeElectricityRequests, TICKS_TO_COLLECT_REQUESTS - global.workTick)
-		elseif global.workTick >= TICKS_TO_COLLECT_REQUESTS and global.workTick < TICKS_TO_COLLECT_REQUESTS + TICKS_TO_FULFILL_REQUESTS then
-			if global.workTick == TICKS_TO_COLLECT_REQUESTS then
-				UpdateUseableStorage()
-				PrepareToFulfillRequests()
-				ResetFulfillRequestIterators()
-			end
-			local ticksLeft = (TICKS_TO_COLLECT_REQUESTS + TICKS_TO_FULFILL_REQUESTS) - global.workTick
-			FulfillGetterRequests(global.allowedToMakeElectricityRequests, ticksLeft)
-		end
-
-		--Emptying putters will continiously happen
-		--while requests are gathered and fulfilled
-		if global.workTick >= 0 and global.workTick < TICKS_TO_COLLECT_REQUESTS + TICKS_TO_FULFILL_REQUESTS then
-			if global.workTick == 0 then
-				ResetPutterIterators()
-			end
-			EmptyPutters((TICKS_TO_COLLECT_REQUESTS + TICKS_TO_FULFILL_REQUESTS) - global.workTick)
-		end
-
-		if     global.workTick == TICKS_TO_COLLECT_REQUESTS + TICKS_TO_FULFILL_REQUESTS + 0 then
-			ExportInputList()
-			global.workTick = global.workTick + 1
-		elseif global.workTick == TICKS_TO_COLLECT_REQUESTS + TICKS_TO_FULFILL_REQUESTS + 1 then
-			ExportOutputList()
-
-			--Restart loop
-			global.workTick = 0
-			if global.allowedToMakeElectricityRequests then
-				global.lastElectricityUpdate = game.tick
-			end
-		else
-			global.workTick = global.workTick + 1
-		end
-	else
-		global.isConnected = false
-	end
-	global.prevIsConnected = global.isConnected
-end)
-
--- Return items stuck in useableItemStorage
-script.on_nth_tick(60*60, function(event)
-	if not settings.global["subspace_storage-infinity-mode"].value then
-		local staleTick = game.tick - 60 * 60
-		for itemName, entry in pairs(global.useableItemStorage) do
-			if entry.lastPull < staleTick and entry.remainingItems > 0 then
-				AddItemToInputList(itemName, entry.remainingItems)
-				entry.remainingItems = 0
-			end
-		end
-	end
-end)
-
-function UpdateUseableStorage()
+local function UpdateUseableStorage()
 	for k, v in pairs(global.itemStorage) do
 		GiveItemsToUseableStorage(k, v)
-		global.useableItemStorage[k].initialItemCount = global.useableItemStorage[k].remainingItems
+		useableItemStorage[k].initialItemCount = useableItemStorage[k].remainingItems
 	end
 	global.itemStorage = {}
 end
 
-
 ----------------------------------------
 --[[Getter and setter update methods]]--
 ----------------------------------------
-function ResetRequestGathering()
-	global.outputChestsData.entitiesData.pos = 0
-	global.outputChestsData.requests = {}
-
-	global.outputTanksData.entitiesData.pos = 0
-	global.outputTanksData.requests = {}
-
-	global.outputElectricityData.entitiesData.pos = 0
-	global.outputElectricityData.requests = {}
+local function isFluidLegal(name)
+	for _, itemName in pairs(global.config.BWfluids) do
+		if itemName == name then
+			return global.config.fluid_is_whitelist
+		end
+	end
+	return not global.config.fluid_is_whitelist
 end
 
-function ResetFulfillRequestIterators()
-	global.outputChestsData.requestsLL.pos = 0
-	global.outputTanksData.requestsLL.pos = 0
-	global.outputElectricityData.requestsLL.pos = 0
+local function isItemLegal(name)
+	for _, itemName in pairs(global.config.BWitems) do
+		if itemName == name then
+			return global.config.item_is_whitelist
+		end
+	end
+	return not global.config.item_is_whitelist
 end
 
-function ResetPutterIterators()
-	global.inputChestsData.entitiesData.pos = 0
-	global.inputTanksData.entitiesData.pos = 0
-	global.inputElectricityData.entitiesData.pos = 0
+local function ResetRequestGathering()
+	outputChestsData.entitiesData.pos = 0
+	outputChestsData.requests = {}
+
+	outputTanksData.entitiesData.pos = 0
+	outputTanksData.requests = {}
+
+	outputElectricityData.entitiesData.pos = 0
+	outputElectricityData.requests = {}
 end
 
-function PrepareToFulfillRequests()
-	global.outputChestsData.requestsLL      = PrepareRequests(global.outputChestsData.requests     , true)
-	global.outputTanksData.requestsLL       = PrepareRequests(global.outputTanksData.requests      , false)
-	global.outputElectricityData.requestsLL = PrepareRequests(global.outputElectricityData.requests, false)
+local function ResetFulfillRequestIterators()
+	outputChestsData.requestsLL.pos = 0
+	outputTanksData.requestsLL.pos = 0
+	outputElectricityData.requestsLL.pos = 0
+end
+
+local function ResetPutterIterators()
+	inputChestsData.entitiesData.pos = 0
+	inputTanksData.entitiesData.pos = 0
+	inputElectricityData.entitiesData.pos = 0
+end
+
+local function PrepareRequests(array, shouldSort)
+	local requests = { pos = 0 }
+	for itemName, requestInfo in pairs(array) do
+		if shouldSort then
+			--To be able to distribute it fairly, the requesters need to be sorted in order of how
+			--much they are missing, so the requester with the least missing of the item will be first.
+			--If this isn't done then there could be items leftover after they have been distributed
+			--even though they could all have been distributed if they had been distributed in order.
+			table.sort(requestInfo.requesters, function(left, right)
+				return left.missingAmount < right.missingAmount
+			end)
+		end
+
+		for i = 1, #requestInfo.requesters do
+			local request = requestInfo.requesters[i]
+			request.itemName = itemName
+			request.requestedAmount = requestInfo.requestedAmount
+			table.insert(requests, request)
+		end
+	end
+
+	return requests
+end
+
+local function PrepareToFulfillRequests()
+	outputChestsData.requestsLL      = PrepareRequests(outputChestsData.requests     , true)
+	outputTanksData.requestsLL       = PrepareRequests(outputTanksData.requests      , false)
+	outputElectricityData.requestsLL = PrepareRequests(outputElectricityData.requests, false)
 end
 
 -- Iterates through a sequence over a number of separate runs
-function partial_ipairs(list, runs_left)
-	function iterator(state, pos)
+local function partial_ipairs(list, runs_left)
+	local function iterator(state, pos)
 		if pos >= state.endpoint or pos >= #state.list then
 			return nil, nil
 		end
@@ -487,124 +421,31 @@ function partial_ipairs(list, runs_left)
 	return iterator, { list = list, endpoint = endpoint }, pos
 end
 
-function RetrieveGetterRequests(allowedToGetElectricityRequests, ticksLeft)
-	local chestData = global.outputChestsData.entitiesData
-	for _, data in partial_ipairs(chestData, ticksLeft) do
-		GetOutputChestRequest(global.outputChestsData.requests, data)
+local function AddRequestToTable(requests, itemName, missingAmount, storage)
+	--If this is the first entry for this item type then
+	--create a table for this item type first
+	if requests[itemName] == nil then
+		requests[itemName] =
+		{
+			requestedAmount = 0,
+			requesters = {}
+		}
 	end
 
-	local tankData = global.outputTanksData.entitiesData
-	for _, data in partial_ipairs(tankData, ticksLeft) do
-		GetOutputTankRequest(global.outputTanksData.requests, data)
-	end
+	local itemEntry = requests[itemName]
 
-	if allowedToGetElectricityRequests then
-		local electricityData = global.outputElectricityData.entitiesData
-		for _, data in partial_ipairs(electricityData, ticksLeft) do
-			GetOutputElectricityRequest(global.outputElectricityData.requests, data)
-		end
-	end
+	--Add missing item to the count and add this chest inv to the list
+	itemEntry.requestedAmount = itemEntry.requestedAmount + missingAmount
+	itemEntry.requesters[#itemEntry.requesters + 1] =
+	{
+		storage = storage,
+		missingAmount = missingAmount
+	}
+
+	return itemEntry.requesters[#itemEntry.requesters]
 end
 
-function FulfillGetterRequests(allowedToGetElectricityRequests, ticksLeft)
-	local chestRequests = global.outputChestsData.requestsLL
-	for _, data in partial_ipairs(chestRequests, ticksLeft) do
-		EvenlyDistributeItems(data, OutputChestInputMethod)
-	end
-
-	local tankRequests = global.outputTanksData.requestsLL
-	for _, data in partial_ipairs(tankRequests, ticksLeft) do
-		EvenlyDistributeItems(data, OutputTankInputMethod)
-	end
-
-	if allowedToGetElectricityRequests then
-		local electricityRequests = global.outputElectricityData.requestsLL
-		for _, data in partial_ipairs(electricityRequests, ticksLeft) do
-			EvenlyDistributeItems(data, OutputElectricityinputMethod)
-		end
-	end
-end
-
-function EmptyPutters(ticksLeft)
-	local chestData = global.inputChestsData.entitiesData
-	for _, data in partial_ipairs(chestData, ticksLeft) do
-		HandleInputChest(data)
-	end
-
-	local tankData = global.inputTanksData.entitiesData
-	for _, data in partial_ipairs(tankData, ticksLeft) do
-		HandleInputTank(data)
-	end
-
-	local electricityData = global.inputElectricityData.entitiesData
-	for _, data in partial_ipairs(electricityData, ticksLeft) do
-		HandleInputElectricity(data)
-	end
-end
-
-
-function HandleInputChest(entityData)
-	local entity = entityData.entity
-	local inventory = entityData.inv
-	if entity.valid then
-		--get the content of the chest
-		local items = inventory.get_contents()
-		for itemName, itemCount in pairs(items) do
-			if isItemLegal(itemName) then
-				AddItemToInputList(itemName, itemCount)
-				inventory.remove({name = itemName, count = itemCount})
-			end
-		end
-	end
-end
-
-function HandleInputTank(entityData)
-	local entity  = entityData.entity
-	local fluidbox = entityData.fluidbox
-	if entity.valid then
-		--get the content of the chest
-		local fluid = fluidbox[1]
-		if fluid ~= nil and fluid.amount > 0 then
-			if isFluidLegal(fluid.name) then
-				if fluid.amount > 1 then
-					local fluid_taken = math.ceil(fluid.amount) - 1
-					AddItemToInputList(fluid.name, fluid_taken)
-					fluid.amount = fluid.amount - fluid_taken
-					fluidbox[1] = fluid
-				else
-					if entity.get_merged_signal({name="signal-P",type="virtual"}) == 1 then
-						fluidbox[1] = nil
-					end
-				end
-			end
-		end
-	end
-end
-
-function HandleInputElectricity(entityData)
-	--if there is too much energy in the network then stop outputting more
-	local limit = settings.global["subspace_storage-max-electricity"].value
-	if
-		limit >= 0
-		and global.invdata
-		and global.invdata[ELECTRICITY_ITEM_NAME]
-		and global.invdata[ELECTRICITY_ITEM_NAME] >= limit
-	then
-		return
-	end
-
-	local entity = entityData.entity
-	if entity.valid then
-		local energy = entity.energy
-		local availableEnergy = math.floor(energy / ELECTRICITY_RATIO)
-		if availableEnergy > 0 then
-			AddItemToInputList(ELECTRICITY_ITEM_NAME, availableEnergy)
-			entity.energy = energy - (availableEnergy * ELECTRICITY_RATIO)
-		end
-	end
-end
-
-function GetOutputChestRequest(requests, entityData)
+local function GetOutputChestRequest(requests, entityData)
 	local entity = entityData.entity
 	local chestInventory = entityData.inv
 	--Don't insert items into the chest if it's being deconstructed
@@ -635,7 +476,7 @@ function GetOutputChestRequest(requests, entityData)
 	end
 end
 
-function GetOutputTankRequest(requests, entityData)
+local function GetOutputTankRequest(requests, entityData)
 	local entity = entityData.entity
 	local fluidbox = entityData.fluidbox
 	--The type of fluid the tank should output
@@ -670,7 +511,7 @@ function GetOutputTankRequest(requests, entityData)
 	end
 end
 
-function GetOutputElectricityRequest(requests, entityData)
+local function GetOutputElectricityRequest(requests, entityData)
 	local entity = entityData.entity
 	local bufferSize = entityData.bufferSize
 	if entity.valid then
@@ -683,96 +524,78 @@ function GetOutputElectricityRequest(requests, entityData)
 	end
 end
 
-function OutputChestInputMethod(request, itemName, evenShareOfItems)
-	if request.storage.valid then
-		local itemsToInsert =
+local function RetrieveGetterRequests(allowedToGetElectricityRequests, ticksLeft)
+	local chestData = outputChestsData.entitiesData
+	for _, data in partial_ipairs(chestData, ticksLeft) do
+		GetOutputChestRequest(outputChestsData.requests, data)
+	end
+
+	local tankData = outputTanksData.entitiesData
+	for _, data in partial_ipairs(tankData, ticksLeft) do
+		GetOutputTankRequest(outputTanksData.requests, data)
+	end
+
+	if allowedToGetElectricityRequests then
+		local electricityData = outputElectricityData.entitiesData
+		for _, data in partial_ipairs(electricityData, ticksLeft) do
+			GetOutputElectricityRequest(outputElectricityData.requests, data)
+		end
+	end
+end
+
+local function RequestItemsFromUseableStorage(itemName, itemCount)
+	--if infinite resources then the whole request is approved
+	if global.setting_infinity_mode then
+		return itemCount
+	end
+
+	--if result is nil then there is no items in storage
+	--which means that no items can be given
+	if useableItemStorage[itemName] == nil then
+		return 0
+	end
+	--if the number of items in storage is lower than the number of items
+	--requested then take the number of items there are left otherwise take the requested amount
+	local itemsTakenFromStorage = math.min(useableItemStorage[itemName].remainingItems, itemCount)
+	useableItemStorage[itemName].remainingItems = useableItemStorage[itemName].remainingItems - itemsTakenFromStorage
+	useableItemStorage[itemName].lastPull = game.tick
+
+	return itemsTakenFromStorage
+end
+
+local function GetInitialItemCount(itemName)
+	--this method is used so the mod knows hopw to distribute
+	--the items between all entities. If infinite resources is enabled
+	--then all entities should get their requests fulfilled-
+	--To simulate that this method returns 1mil which should be enough
+	--for all entities to fulfill their whole item request
+	if global.setting_infinity_mode then
+		return 1000000 --1.000.000
+	end
+
+	if useableItemStorage[itemName] == nil then
+		return 0
+	end
+	return useableItemStorage[itemName].initialItemCount
+end
+
+local function AddItemToOutputList(itemName, itemCount)
+	global.outputList[itemName] = (global.outputList[itemName] or 0) + itemCount
+end
+
+local function GiveItemsToUseableStorage(itemName, itemCount)
+	if useableItemStorage[itemName] == nil then
+		useableItemStorage[itemName] =
 		{
-			name = itemName,
-			count = evenShareOfItems
-		}
-
-		return request.inv.insert(itemsToInsert)
-	else
-		return 0
-	end
-end
-
-function OutputTankInputMethod(request, fluidName, evenShareOfFluid)
-	if request.storage.valid then
-		local fluid = request.fluidbox[1] or {name = fluidName, amount = 0}
-		fluid.amount = fluid.amount + evenShareOfFluid
-
-		--Need to set steams heat because otherwise it's too low
-		if fluid.name == "steam" then
-			fluid.temperature = 165
-		end
-
-		request.fluidbox[1] = fluid
-		return evenShareOfFluid
-	else
-		return 0
-	end
-end
-
-function OutputElectricityinputMethod(request, _, evenShare)
-	if request.storage.valid then
-		request.storage.energy = request.energy + (evenShare * ELECTRICITY_RATIO)
-		return evenShare
-	else
-		return 0
-	end
-end
-
-
-function PrepareRequests(array, shouldSort)
-	local requests = { pos = 0 }
-	for itemName, requestInfo in pairs(array) do
-		if shouldSort then
-			--To be able to distribute it fairly, the requesters need to be sorted in order of how
-			--much they are missing, so the requester with the least missing of the item will be first.
-			--If this isn't done then there could be items leftover after they have been distributed
-			--even though they could all have been distributed if they had been distributed in order.
-			table.sort(requestInfo.requesters, function(left, right)
-				return left.missingAmount < right.missingAmount
-			end)
-		end
-
-		for i = 1, #requestInfo.requesters do
-			local request = requestInfo.requesters[i]
-			request.itemName = itemName
-			request.requestedAmount = requestInfo.requestedAmount
-			table.insert(requests, request)
-		end
-	end
-
-	return requests
-end
-
-function AddRequestToTable(requests, itemName, missingAmount, storage)
-	--If this is the first entry for this item type then
-	--create a table for this item type first
-	if requests[itemName] == nil then
-		requests[itemName] =
-		{
-			requestedAmount = 0,
-			requesters = {}
+			initialItemCount = 0,
+			remainingItems = 0,
+			lastPull = game.tick,
 		}
 	end
-
-	local itemEntry = requests[itemName]
-
-	--Add missing item to the count and add this chest inv to the list
-	itemEntry.requestedAmount = itemEntry.requestedAmount + missingAmount
-	itemEntry.requesters[#itemEntry.requesters + 1] =
-	{
-		storage = storage,
-		missingAmount = missingAmount
-	}
-
-	return itemEntry.requesters[#itemEntry.requesters]
+	useableItemStorage[itemName].remainingItems = useableItemStorage[itemName].remainingItems + itemCount
 end
 
-function EvenlyDistributeItems(request, functionToInsertItems)
+local function EvenlyDistributeItems(request, functionToInsertItems)
 	--Take the required item count from storage or how much storage has
 	local itemCount = RequestItemsFromUseableStorage(request.itemName, request.requestedAmount)
 
@@ -814,11 +637,154 @@ function EvenlyDistributeItems(request, functionToInsertItems)
 
 end
 
+local function OutputChestInputMethod(request, itemName, evenShareOfItems)
+	if request.storage.valid then
+		local itemsToInsert =
+		{
+			name = itemName,
+			count = evenShareOfItems
+		}
+
+		return request.inv.insert(itemsToInsert)
+	else
+		return 0
+	end
+end
+
+local function OutputTankInputMethod(request, fluidName, evenShareOfFluid)
+	if request.storage.valid then
+		local fluid = request.fluidbox[1] or {name = fluidName, amount = 0}
+		fluid.amount = fluid.amount + evenShareOfFluid
+
+		--Need to set steams heat because otherwise it's too low
+		if fluid.name == "steam" then
+			fluid.temperature = 165
+		end
+
+		request.fluidbox[1] = fluid
+		return evenShareOfFluid
+	else
+		return 0
+	end
+end
+
+local function OutputElectricityinputMethod(request, _, evenShare)
+	if request.storage.valid then
+		request.storage.energy = request.energy + (evenShare * ELECTRICITY_RATIO)
+		return evenShare
+	else
+		return 0
+	end
+end
+
+local function FulfillGetterRequests(allowedToGetElectricityRequests, ticksLeft)
+	local chestRequests = outputChestsData.requestsLL
+	for _, data in partial_ipairs(chestRequests, ticksLeft) do
+		EvenlyDistributeItems(data, OutputChestInputMethod)
+	end
+
+	local tankRequests = outputTanksData.requestsLL
+	for _, data in partial_ipairs(tankRequests, ticksLeft) do
+		EvenlyDistributeItems(data, OutputTankInputMethod)
+	end
+
+	if allowedToGetElectricityRequests then
+		local electricityRequests = outputElectricityData.requestsLL
+		for _, data in partial_ipairs(electricityRequests, ticksLeft) do
+			EvenlyDistributeItems(data, OutputElectricityinputMethod)
+		end
+	end
+end
+
+local function AddItemToInputList(itemName, itemCount)
+	if global.setting_infinity_mode then
+		return
+	end
+	global.inputList[itemName] = (global.inputList[itemName] or 0) + itemCount
+end
+
+local function HandleInputChest(entityData)
+	local entity = entityData.entity
+	local inventory = entityData.inv
+	if entity.valid then
+		--get the content of the chest
+		local items = inventory.get_contents()
+		for itemName, itemCount in pairs(items) do
+			if isItemLegal(itemName) then
+				AddItemToInputList(itemName, itemCount)
+				inventory.remove({name = itemName, count = itemCount})
+			end
+		end
+	end
+end
+
+local function HandleInputTank(entityData)
+	local entity  = entityData.entity
+	local fluidbox = entityData.fluidbox
+	if entity.valid then
+		--get the content of the chest
+		local fluid = fluidbox[1]
+		if fluid ~= nil and fluid.amount > 0 then
+			if isFluidLegal(fluid.name) then
+				if fluid.amount > 1 then
+					local fluid_taken = math.ceil(fluid.amount) - 1
+					AddItemToInputList(fluid.name, fluid_taken)
+					fluid.amount = fluid.amount - fluid_taken
+					fluidbox[1] = fluid
+				else
+					if entity.get_merged_signal({name="signal-P",type="virtual"}) == 1 then
+						fluidbox[1] = nil
+					end
+				end
+			end
+		end
+	end
+end
+
+local function HandleInputElectricity(entityData)
+	--if there is too much energy in the network then stop outputting more
+	local limit = global.setting_max_electricity
+	if
+		limit >= 0
+		and global.invdata
+		and global.invdata[ELECTRICITY_ITEM_NAME]
+		and global.invdata[ELECTRICITY_ITEM_NAME] >= limit
+	then
+		return
+	end
+
+	local entity = entityData.entity
+	if entity.valid then
+		local energy = entity.energy
+		local availableEnergy = math.floor(energy / ELECTRICITY_RATIO)
+		if availableEnergy > 0 then
+			AddItemToInputList(ELECTRICITY_ITEM_NAME, availableEnergy)
+			entity.energy = energy - (availableEnergy * ELECTRICITY_RATIO)
+		end
+	end
+end
+
+local function EmptyPutters(ticksLeft)
+	local chestData = inputChestsData.entitiesData
+	for _, data in partial_ipairs(chestData, ticksLeft) do
+		HandleInputChest(data)
+	end
+
+	local tankData = inputTanksData.entitiesData
+	for _, data in partial_ipairs(tankData, ticksLeft) do
+		HandleInputTank(data)
+	end
+
+	local electricityData = inputElectricityData.entitiesData
+	for _, data in partial_ipairs(electricityData, ticksLeft) do
+		HandleInputElectricity(data)
+	end
+end
 
 ----------------------------------------
 --[[Methods that talk with Clusterio]]--
 ----------------------------------------
-function ExportInputList()
+local function ExportInputList()
 	local items = {}
 	for name, count in pairs(global.inputList) do
 		table.insert(items, {name, count})
@@ -829,7 +795,7 @@ function ExportInputList()
 	end
 end
 
-function ExportOutputList()
+local function ExportOutputList()
 	local items = {}
 	for name, count in pairs(global.outputList) do
 		table.insert(items, {name, count})
@@ -840,66 +806,22 @@ function ExportOutputList()
 	end
 end
 
-function Import(data)
+local function GiveItemsToStorage(itemName, itemCount)
+	--if this is called for the first time for an item then the result
+	--is nil. if that's the case then set the result to 0 so it can
+	--be used in arithmetic operations
+	global.itemStorage[itemName] = global.itemStorage[itemName] or 0
+	global.itemStorage[itemName] = global.itemStorage[itemName] + itemCount
+end
+
+local function Import(data)
 	local items = game.json_to_table(data)
 	for _, item in ipairs(items) do
 		GiveItemsToStorage(item[1], item[2])
 	end
 end
 
-function UpdateInvData(data, full)
-	if full then
-		global.invdata = {}
-	end
-	local items = game.json_to_table(data)
-	for _, item in ipairs(items) do
-		global.invdata[item[1]] = item[2]
-	end
-	UpdateInvCombinators()
-end
-
----------------------------------
---[[Update combinator methods]]--
----------------------------------
-
-function AreTablesSame(tableA, tableB)
-	if tableA == nil and tableB ~= nil then
-		return false
-	elseif tableA ~= nil and tableB == nil then
-		return false
-	elseif tableA == nil and tableB == nil then
-		return true
-	end
-
-	if TableWithKeysLength(tableA) ~= TableWithKeysLength(tableB) then
-		return false
-	end
-
-	for keyA, valueA in pairs(tableA) do
-		local valueB = tableB[keyA]
-		if type(valueA) == "table" and type(valueB) == "table" then
-			if not AreTablesSame(valueA, valueB) then
-				return false
-			end
-		elseif type(valueA) ~= type(valueB) then
-			return false
-		elseif valueA ~= valueB then
-			return false
-		end
-	end
-
-	return true
-end
-
-function TableWithKeysLength(tableA)
-	local count = 0
-	for k, v in pairs(tableA) do
-		count = count + 1
-	end
-	return count
-end
-
-function UpdateInvCombinators()
+local function UpdateInvCombinators()
 	-- Update all inventory Combinators
 	-- Prepare a frame from the last inventory report, plus any virtuals
 	local invframe = {}
@@ -928,15 +850,65 @@ function UpdateInvCombinators()
 		end
 	end
 
-	for i,invControl in pairs(global.invControls) do
+	for _, invControl in pairs(invControls) do
 		if invControl.valid then
 			compat.set_parameters(invControl, invframe)
-			invControl.enabled=true
+			invControl.enabled = true
 		end
 	end
 
 end
 
+local function UpdateInvData(data, full)
+	if full then
+		global.invdata = {}
+	end
+	local items = game.json_to_table(data)
+	for _, item in ipairs(items) do
+		global.invdata[item[1]] = item[2]
+	end
+	UpdateInvCombinators()
+end
+
+---------------------------------
+--[[Update combinator methods]]--
+---------------------------------
+local function TableWithKeysLength(tableA)
+	local count = 0
+	for k, v in pairs(tableA) do
+		count = count + 1
+	end
+	return count
+end
+
+local function AreTablesSame(tableA, tableB)
+	if tableA == nil and tableB ~= nil then
+		return false
+	elseif tableA ~= nil and tableB == nil then
+		return false
+	elseif tableA == nil and tableB == nil then
+		return true
+	end
+
+	if TableWithKeysLength(tableA) ~= TableWithKeysLength(tableB) then
+		return false
+	end
+
+	for keyA, valueA in pairs(tableA) do
+		local valueB = tableB[keyA]
+		if type(valueA) == "table" and type(valueB) == "table" then
+			if not AreTablesSame(valueA, valueB) then
+				return false
+			end
+		elseif type(valueA) ~= type(valueB) then
+			return false
+		elseif valueA ~= valueB then
+			return false
+		end
+	end
+
+	return true
+end
 
 ---------------------
 --[[Remote things]]--
@@ -957,96 +929,11 @@ remote.add_interface("clusterio",
 --------------------
 --[[Misc methods]]--
 --------------------
-function RequestItemsFromUseableStorage(itemName, itemCount)
-	--if infinite resources then the whole request is approved
-	if settings.global["subspace_storage-infinity-mode"].value then
-		return itemCount
-	end
-
-	--if result is nil then there is no items in storage
-	--which means that no items can be given
-	if global.useableItemStorage[itemName] == nil then
-		return 0
-	end
-	--if the number of items in storage is lower than the number of items
-	--requested then take the number of items there are left otherwise take the requested amount
-	local itemsTakenFromStorage = math.min(global.useableItemStorage[itemName].remainingItems, itemCount)
-	global.useableItemStorage[itemName].remainingItems = global.useableItemStorage[itemName].remainingItems - itemsTakenFromStorage
-	global.useableItemStorage[itemName].lastPull = game.tick
-
-	return itemsTakenFromStorage
-end
-
-function GetInitialItemCount(itemName)
-	--this method is used so the mod knows hopw to distribute
-	--the items between all entities. If infinite resources is enabled
-	--then all entities should get their requests fulfilled-
-	--To simulate that this method returns 1mil which should be enough
-	--for all entities to fulfill their whole item request
-	if settings.global["subspace_storage-infinity-mode"].value then
-		return 1000000 --1.000.000
-	end
-
-	if global.useableItemStorage[itemName] == nil then
-		return 0
-	end
-	return global.useableItemStorage[itemName].initialItemCount
-end
-
-function GiveItemsToUseableStorage(itemName, itemCount)
-	if global.useableItemStorage[itemName] == nil then
-		global.useableItemStorage[itemName] =
-		{
-			initialItemCount = 0,
-			remainingItems = 0,
-			lastPull = game.tick,
-		}
-	end
-	global.useableItemStorage[itemName].remainingItems = global.useableItemStorage[itemName].remainingItems + itemCount
-end
-
-function GiveItemsToStorage(itemName, itemCount)
-	--if this is called for the first time for an item then the result
-	--is nil. if that's the case then set the result to 0 so it can
-	--be used in arithmetic operations
-	global.itemStorage[itemName] = global.itemStorage[itemName] or 0
-	global.itemStorage[itemName] = global.itemStorage[itemName] + itemCount
-end
-
-function AddItemToInputList(itemName, itemCount)
-	if settings.global["subspace_storage-infinity-mode"].value then
-		return
-	end
-	global.inputList[itemName] = (global.inputList[itemName] or 0) + itemCount
-end
-
-function AddItemToOutputList(itemName, itemCount)
-	global.outputList[itemName] = (global.outputList[itemName] or 0) + itemCount
-end
-
-function isFluidLegal(name)
-	for _,itemName in pairs(global.config.BWfluids) do
-		if itemName==name then
-			return global.config.fluid_is_whitelist
-		end
-	end
-	return not global.config.fluid_is_whitelist
-end
-
-function isItemLegal(name)
-	for _,itemName in pairs(global.config.BWitems) do
-		if itemName==name then
-			return global.config.item_is_whitelist
-		end
-	end
-	return not global.config.item_is_whitelist
-end
-
 
 -------------------
 --[[GUI methods]]--
 -------------------
-function createElemGui_INTERNAL(pane, guiName, elem_type, loadingList)
+local function createElemGui_INTERNAL(pane, guiName, elem_type, loadingList)
 	local gui = pane.add{type = "table", name = guiName, column_count = 5}
 	for _, item in pairs(loadingList) do
 		gui.add{type = "choose-elem-button", elem_type = elem_type, item = item, fluid = item}
@@ -1054,7 +941,7 @@ function createElemGui_INTERNAL(pane, guiName, elem_type, loadingList)
 	gui.add{type = "choose-elem-button", elem_type = elem_type}
 end
 
-function toggleBWItemListGui(parent)
+local function toggleBWItemListGui(parent)
 	if parent["clusterio-black-white-item-list-config"] then
         parent["clusterio-black-white-item-list-config"].destroy()
         return
@@ -1066,7 +953,7 @@ function toggleBWItemListGui(parent)
 	createElemGui_INTERNAL(pane, "item-black-white-list", "item", global.config.BWitems)
 end
 
-function toggleBWFluidListGui(parent)
+local function toggleBWFluidListGui(parent)
 	if parent["clusterio-black-white-fluid-list-config"] then
         parent["clusterio-black-white-fluid-list-config"].destroy()
         return
@@ -1078,7 +965,7 @@ function toggleBWFluidListGui(parent)
 	createElemGui_INTERNAL(pane, "fluid-black-white-list", "fluid", global.config.BWfluids)
 end
 
-function processElemGui(event, toUpdateConfigName)--VERY WIP
+local function processElemGui(event, toUpdateConfigName)--VERY WIP
 	local parent = event.element.parent
 	if event.element.elem_value == nil then
 		event.element.destroy()
@@ -1094,7 +981,7 @@ function processElemGui(event, toUpdateConfigName)--VERY WIP
 	end
 end
 
-function toggleMainConfigGui(parent)
+local function toggleMainConfigGui(parent)
 	if parent["clusterio-main-config-gui"] then
         parent["clusterio-main-config-gui"].destroy()
         return
@@ -1105,7 +992,7 @@ function toggleMainConfigGui(parent)
 	pane.add{type = "button", name = "clusterio-Fluid-WB-list", caption = {"subspace_storage.fluid-bw-list"}}
 end
 
-function processMainConfigGui(event)
+local function processMainConfigGui(event)
 	if event.element.name == "clusterio-Item-WB-list" then
 		toggleBWItemListGui(game.players[event.player_index].gui.top)
 	elseif event.element.name == "clusterio-Fluid-WB-list" then
@@ -1113,6 +1000,155 @@ function processMainConfigGui(event)
 	end
 end
 
+local function makeConfigButton(parent)
+	if not parent["clusterio-main-config-gui-toggle-button"] then
+		parent.add{type = "sprite-button", name = "clusterio-main-config-gui-toggle-button", sprite="clusterio"}
+  end
+end
+
+
+--===============================================================================================--
+
+-----------------------------
+--[[Thing creation events]]--
+-----------------------------
+script.on_event(defines.events.on_built_entity, OnBuiltEntity)
+script.on_event(defines.events.on_robot_built_entity, OnBuiltEntity)
+
+----------------------------
+--[[Thing killing events]]--
+----------------------------
+script.on_event(defines.events.on_entity_died, OnKilledEntity)
+script.on_event(defines.events.on_robot_pre_mined, OnKilledEntity)
+script.on_event(defines.events.on_pre_player_mined_item, OnKilledEntity)
+script.on_event(defines.events.script_raised_destroy, OnKilledEntity)
+
+------------------------------
+--[[Thing resetting events]]--
+------------------------------
+script.on_init(function()
+	clusterio_api.init()
+	RegisterClusterioEvents()
+	UpdateSettings()
+	Reset()
+end)
+
+script.on_load(function()
+	clusterio_api.init()
+	RegisterClusterioEvents()
+	MakeLocalReferences()
+end)
+
+script.on_configuration_changed(function(data)
+	if data.mod_changes and data.mod_changes["subspace_storage"] then
+		if global.hasInfiniteResources ~= nil then
+			log("Migrating global.hasInfiniteResources = " .. tostring(global.hasInfiniteResources))
+			settings.global["subspace_storage-infinity-mode"] = { value = global.hasInfiniteResources }
+			global.hasInfiniteResources = nil
+		end
+		if global.maxElectricity ~= nil then
+			log("Migrating global.maxElectricity = " .. tostring(global.maxElectricity))
+			settings.global["subspace_storage-max-electricity"] = { value = global.maxElectricity }
+			global.maxElectricity = nil
+		end
+		UpdateSettings()
+		Reset()
+	end
+end)
+
+script.on_event(defines.events.on_runtime_mod_setting_changed, UpdateSettings)
+
+script.on_event(defines.events.on_tick, function(event)
+	--If the mod isn't connected then still pretend that it's
+	--so items requests and removals can be fulfilled
+	if global.setting_infinity_mode then
+		global.ticksSinceMasterPinged = 0
+	end
+
+	global.ticksSinceMasterPinged = global.ticksSinceMasterPinged + 1
+	if global.ticksSinceMasterPinged < 300 then
+		global.isConnected = true
+
+		if global.prevIsConnected == false then
+			global.workTick = 0
+		end
+
+		local _workTick = global.workTick
+
+		if _workTick == 0 then
+			--importing electricity should be limited because it requests so
+			--much at once. If it wasn't limited then the electricity could
+			--make small burst of requests which requests >10x more than it needs
+			--which could temporarily starve other networks.
+			--Updating every 4 seconds give two chances to give electricity in
+			--the 10 second period.
+			local timeSinceLastElectricityUpdate = game.tick - global.lastElectricityUpdate
+			global.allowedToMakeElectricityRequests = timeSinceLastElectricityUpdate > 60 * 3.5
+		end
+
+		local allowedToMakeElectricityRequests = global.allowedToMakeElectricityRequests
+
+		--First retrieve requests and then fulfill them
+		if _workTick >= 0 and _workTick < TICKS_TO_COLLECT_REQUESTS then
+			if _workTick == 0 then
+				ResetRequestGathering()
+			end
+			RetrieveGetterRequests(allowedToMakeElectricityRequests, TICKS_TO_COLLECT_REQUESTS - _workTick)
+		elseif _workTick >= TICKS_TO_COLLECT_REQUESTS and _workTick < TICKS_TO_COLLECT_AND_FULFILL_REQUESTS then
+			if _workTick == TICKS_TO_COLLECT_REQUESTS then
+				UpdateUseableStorage()
+				PrepareToFulfillRequests()
+				ResetFulfillRequestIterators()
+			end
+			local ticksLeft = (TICKS_TO_COLLECT_AND_FULFILL_REQUESTS) - _workTick
+			FulfillGetterRequests(allowedToMakeElectricityRequests, ticksLeft)
+		end
+
+		--Emptying putters will continiously happen
+		--while requests are gathered and fulfilled
+		if _workTick >= 0 and _workTick < TICKS_TO_COLLECT_AND_FULFILL_REQUESTS then
+			if _workTick == 0 then
+				ResetPutterIterators()
+			end
+			EmptyPutters((TICKS_TO_COLLECT_AND_FULFILL_REQUESTS) - _workTick)
+		end
+
+		if     _workTick == TICKS_TO_COLLECT_AND_FULFILL_REQUESTS + 0 then
+			ExportInputList()
+			global.workTick = _workTick + 1
+		elseif _workTick == TICKS_TO_COLLECT_AND_FULFILL_REQUESTS + 1 then
+			ExportOutputList()
+
+			--Restart loop
+			global.workTick = 0
+			if allowedToMakeElectricityRequests then
+				global.lastElectricityUpdate = game.tick
+			end
+		else
+			global.workTick = _workTick + 1
+		end
+	else
+		global.isConnected = false
+	end
+	global.prevIsConnected = global.isConnected
+end)
+
+-- Return items stuck in useableItemStorage
+script.on_nth_tick(60*60, function(event)
+	if not global.setting_infinity_mode then
+		local staleTick = game.tick - 60 * 60
+		for itemName, entry in pairs(useableItemStorage) do
+			if entry.lastPull < staleTick and entry.remainingItems > 0 then
+				AddItemToInputList(itemName, entry.remainingItems)
+				entry.remainingItems = 0
+			end
+		end
+	end
+end)
+
+-------------------
+--[[GUI methods]]--
+-------------------
 script.on_event(defines.events.on_gui_checked_state_changed, function(event)
 	if not (event.element.parent) then
 		return
@@ -1162,13 +1198,6 @@ script.on_event(defines.events.on_gui_text_changed, function(event)
 	end
 end)
 
-function makeConfigButton(parent)
-	if not parent["clusterio-main-config-gui-toggle-button"] then
-		parent.add{type = "sprite-button", name = "clusterio-main-config-gui-toggle-button", sprite="clusterio"}
-    end
-end
-
-
 --------------------------
 --[[Some random events]]--
 --------------------------
@@ -1188,9 +1217,8 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
 		return
 	end
 
-	local restrictionEnabled = settings.global["subspace_storage-range-restriction-enabled"].value
 	local drawZone = false
-	if restrictionEnabled then
+	if global.setting_range_restriction then
 		local stack = player.cursor_stack
 		if stack and stack.valid and stack.valid_for_read then
 			if restrictedEntities[stack.name] then
@@ -1209,8 +1237,8 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
 			local x0 = spawn.x
 			local y0 = spawn.y
 
-			local width = settings.global["subspace_storage-zone-width"].value
-			local height = settings.global["subspace_storage-zone-height"].value
+			local width = global.setting_zone_width
+			local height = global.setting_zone_height
 			if width == 0 then width = 2000000 end
 			if height == 0 then height = 2000000 end
 
