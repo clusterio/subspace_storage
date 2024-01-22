@@ -101,30 +101,32 @@ end
 ----------------------
 
 function Public.on_init()
-  clusterio_api.init()
+	clusterio_api.init()
 	UpdateSettings()
 	Reset()
 end
 
 function Public.on_load()
-  clusterio_api.init()
+	clusterio_api.init()
 end
 
 function Public.on_configuration_changed(data)
-	if data.mod_changes and data.mod_changes["subspace_storage"] then
-		if global.hasInfiniteResources ~= nil then
-			log("Migrating global.hasInfiniteResources = " .. tostring(global.hasInfiniteResources))
-			settings.global["subspace_storage-infinity-mode"] = { value = global.hasInfiniteResources }
-			global.hasInfiniteResources = nil
-		end
-		if global.maxElectricity ~= nil then
-			log("Migrating global.maxElectricity = " .. tostring(global.maxElectricity))
-			settings.global["subspace_storage-max-electricity"] = { value = global.maxElectricity }
-			global.maxElectricity = nil
-		end
-		UpdateSettings()
-		Reset()
+	if not (data.mod_changes and data.mod_changes["subspace_storage"]) then
+		return
 	end
+
+	if global.hasInfiniteResources ~= nil then
+		log("Migrating global.hasInfiniteResources = " .. tostring(global.hasInfiniteResources))
+		settings.global["subspace_storage-infinity-mode"] = { value = global.hasInfiniteResources }
+		global.hasInfiniteResources = nil
+	end
+	if global.maxElectricity ~= nil then
+		log("Migrating global.maxElectricity = " .. tostring(global.maxElectricity))
+		settings.global["subspace_storage-max-electricity"] = { value = global.maxElectricity }
+		global.maxElectricity = nil
+	end
+	UpdateSettings()
+	Reset()
 end
 
 Public.on_runtime_mod_setting_changed = UpdateSettings

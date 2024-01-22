@@ -206,24 +206,24 @@ local function GetOutputElectricityRequest(requests, entityData)
 end
 
 local function RetrieveGetterRequests(allowedToGetElectricityRequests, ticksLeft)
-  local outputChestsData = global.outputChestsData
+	local outputChestsData = global.outputChestsData
 	local chestData = outputChestsData.entitiesData
-  local chestRequests = outputChestsData.requests
+	local chestRequests = outputChestsData.requests
 	for _, data in partial_ipairs(chestData, ticksLeft) do
 		GetOutputChestRequest(chestRequests, data)
 	end
 
-  local outputTanksData = global.outputTanksData
+	local outputTanksData = global.outputTanksData
 	local tankData = outputTanksData.entitiesData
-  local tankRequests = outputTanksData.requests
+	local tankRequests = outputTanksData.requests
 	for _, data in partial_ipairs(tankData, ticksLeft) do
 		GetOutputTankRequest(tankRequests, data)
 	end
 
 	if allowedToGetElectricityRequests then
-    local outputElectricityData = global.outputElectricityData
+		local outputElectricityData = global.outputElectricityData
 		local electricityData = outputElectricityData.entitiesData
-    local electricityRequests = outputElectricityData.requests
+		local electricityRequests = outputElectricityData.requests
 		for _, data in partial_ipairs(electricityData, ticksLeft) do
 			GetOutputElectricityRequest(electricityRequests, data)
 		end

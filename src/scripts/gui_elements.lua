@@ -16,9 +16,9 @@ end
 
 local function toggleBWItemListGui(parent)
 	if parent["clusterio-black-white-item-list-config"] then
-        parent["clusterio-black-white-item-list-config"].destroy()
-        return
-    end
+		parent["clusterio-black-white-item-list-config"].destroy()
+		return
+	end
 
 	local pane = parent.add{type = "frame", name = "clusterio-black-white-item-list-config", direction = "vertical"}
 	pane.add{type = "label", caption = {"subspace_storage.item"}}
@@ -28,9 +28,9 @@ end
 
 local function toggleBWFluidListGui(parent)
 	if parent["clusterio-black-white-fluid-list-config"] then
-        parent["clusterio-black-white-fluid-list-config"].destroy()
-        return
-    end
+		parent["clusterio-black-white-fluid-list-config"].destroy()
+		return
+	end
 
 	local pane = parent.add{type = "frame", name = "clusterio-black-white-fluid-list-config", direction = "vertical"}
 	pane.add{type = "label", caption = {"subspace_storage.fluid"}}
@@ -56,9 +56,9 @@ end
 
 local function toggleMainConfigGui(parent)
 	if parent["clusterio-main-config-gui"] then
-        parent["clusterio-main-config-gui"].destroy()
-        return
-    end
+		parent["clusterio-main-config-gui"].destroy()
+		return
+	end
 
 	local pane = parent.add{type = "frame", name = "clusterio-main-config-gui", direction = "vertical"}
 	pane.add{type = "button", name = "clusterio-Item-WB-list", caption = {"subspace_storage.item-bw-list"}}
@@ -76,7 +76,7 @@ end
 local function makeConfigButton(parent)
 	if not parent["clusterio-main-config-gui-toggle-button"] then
 		parent.add{type = "sprite-button", name = "clusterio-main-config-gui-toggle-button", sprite="clusterio"}
-  end
+	end
 end
 
 
