@@ -6,7 +6,7 @@ data:extend {
 		name = "subspace_storage-range-restriction-enabled",
 		setting_type = "runtime-global",
 		order = "a1",
-		default_value = true,
+		default_value = false,
 	},
 	{
 		type = "int-setting",
@@ -25,10 +25,19 @@ data:extend {
 		default_value = 400,
 	},
 	{
+		type = "int-setting",
+		name = "subspace_storage-entity-limit",
+		setting_type = "runtime-global",
+		order = "b3",
+		default_value = 0,
+		minimum_value = 0,
+		maximum_value = 10^9
+	},
+	{
 		type = "double-setting",
 		name = "subspace_storage-max-electricity",
 		setting_type = "runtime-global",
-		order = "b3",
+		order = "b4",
 		default_value = 100000000000000 / config.ELECTRICITY_RATIO --100TJ assuming a ratio of 1.000.000
 	},
 	{

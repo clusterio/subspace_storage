@@ -12,6 +12,7 @@ local restrictedEntities = config.restrictedEntities
 
 local function AddEntity(entity)
 	local entity_name = entity.name
+	local added = 1
 
 	if     entity_name == "subspace-item-injector" then
 		--add the chests to a lists if these chests so they can be interated over
@@ -51,7 +52,11 @@ local function AddEntity(entity)
 			entity = entity,
 			bufferSize = entity.electric_buffer_size
 		})
+	else
+		added = 0
 	end
+
+	global.entityCount = global.entityCount + added
 end
 
 local function AddEntities(entities)
@@ -65,6 +70,92 @@ local function RemoveEntity(list, entity)
 		if v.entity == entity then
 			table.remove(list, i)
 			break
+		end
+	end
+end
+
+local function isEntityCountExceeded()
+	return (global.setting_entity_limit > 0) and (global.entityCount >= global.setting_entity_limit)
+end
+
+local function isOutsideRestrictions(entity, player)
+	if not global.setting_range_restriction then
+		return false
+	end
+
+	local spawn
+	
+	if player and player.valid then
+		spawn = player.force.get_spawn_position(entity.surface)
+	else
+		spawn = game.forces.player.get_spawn_position(entity.surface)
+	end
+
+	local x = entity.position.x - spawn.x
+	local y = entity.position.y - spawn.y
+	local width = global.setting_zone_width
+	local height = global.setting_zone_height
+
+	return not ((math.abs(x) < width / 2) and (math.abs(y) < height / 2))
+end
+
+local function AbortEntityBuilding(entity, player, errorCode)
+	if player and player.valid then
+		local width = global.setting_zone_width
+		local height = global.setting_zone_height
+		local errorCode = errorCode or "default"
+
+		local messages = {
+			["placed-outside-allowed-area"] = {
+				"subspace_storage.placed-outside-allowed-area",
+				width > 0 and width or "inf", height > 0 and height or "inf"
+			},
+			["built-entity-limit-exceeded"] = {
+				"subspace_storage.built-entity-limit-exceeded",
+				global.entityCount, global.setting_entity_limit
+			},
+			["default"] = {
+				"subspace_storage.default-warning"
+			}
+		}
+
+		-- Tell the player what is happening
+		player.print(messages[errorCode])
+
+		if entity.name ~= "entity-ghost" then
+			-- increment entityCount by 1 because destroying a phisical entity will remove 1
+			global.entityCount = global.entityCount + 1
+		end
+
+		-- kill entity, try to give it back to the player though
+		if compat.version_ge(1, 0) then
+			local inventory = game.create_inventory(1)
+			entity.mine {
+				inventory = inventory,
+				force = true,
+			}
+			if inventory[1].valid_for_read then
+				local player_inventory = player.get_main_inventory()
+				if player_inventory then
+					local removed = player_inventory.insert(inventory[1])
+					inventory[1].count = inventory[1].count - removed
+				end
+				if inventory[1].valid_for_read then
+					player.surface.spill_item_stack(player.position, inventory[1])
+				end
+			end
+			inventory.destroy()
+		else
+			if not player.mine_entity(entity, true) then
+				entity.destroy()
+			end
+		end
+	else
+		-- it wasn't placed by a player, we can't tell em whats wrong
+		if compat.version_ge(1, 0) then
+			entity.mine()
+		else
+			entity.destroy()
 		end
 	end
 end
@@ -98,65 +189,19 @@ function Public.OnBuiltEntity(event)
 		return
 	end
 
-	if global.setting_range_restriction then
-		local spawn
-		local player = false
+	local player = false
+	if event.player_index then player = game.players[event.player_index] end
 
-		if event.player_index then player = game.players[event.player_index] end
-
-		if player and player.valid then
-			spawn = game.players[event.player_index].force.get_spawn_position(entity.surface)
-		else
-			spawn = game.forces.player.get_spawn_position(entity.surface)
-		end
-	
-		local x = entity.position.x - spawn.x
-		local y = entity.position.y - spawn.y
-		local width = global.setting_zone_width
-		local height = global.setting_zone_height
-
-		if not ((width == 0 or (math.abs(x) < width / 2)) and (height == 0 or (math.abs(y) < height / 2))) then
-			if player and player.valid then
-				-- Tell the player what is happening
-				player.print({
-					"subspace_storage.placed-outside-allowed-area", x, y,
-					width > 0 and width or "inf", height > 0 and height or "inf"
-				})
-				-- kill entity, try to give it back to the player though
-				if compat.version_ge(1, 0) then
-					local inventory = game.create_inventory(1)
-					entity.mine {
-						inventory = inventory,
-						force = true,
-					}
-					if inventory[1].valid_for_read then
-						local player_inventory = player.get_main_inventory()
-						if player_inventory then
-							local removed = player_inventory.insert(inventory[1])
-							inventory[1].count = inventory[1].count - removed
-						end
-						if inventory[1].valid_for_read then
-							player.surface.spill_item_stack(player.position, inventory[1])
-						end
-					end
-					inventory.destroy()
-				else
-					if not player.mine_entity(entity, true) then
-						entity.destroy()
-					end
-				end
-			else
-				-- it wasn't placed by a player, we can't tell em whats wrong
-				if compat.version_ge(1, 0) then
-					entity.mine()
-				else
-					entity.destroy()
-				end
-			end
-
-			return
-		end
+	if isEntityCountExceeded() then
+		AbortEntityBuilding(entity, player, "built-entity-limit-exceeded")
+		return
 	end
+
+	if isOutsideRestrictions(entity, player) then
+		AbortEntityBuilding(entity, player, "placed-outside-allowed-area")
+		return
+	end
+
 	-- only add entities that are not ghosts
 	if isPhisicalBody then
 		AddEntity(entity)
@@ -170,6 +215,7 @@ function Public.OnKilledEntity(event)
 	end
 
 	local entity_name = entity.name
+	local removed = 1
 	--remove the entities from the tables as they are dead
 	if     entity_name == "subspace-item-injector" then
 		RemoveEntity(global.inputChestsData.entitiesData, entity)
@@ -185,10 +231,18 @@ function Public.OnKilledEntity(event)
 		RemoveEntity(global.inputElectricityData.entitiesData, entity)
 	elseif entity_name == "subspace-electricity-extractor" then
 		RemoveEntity(global.outputElectricityData.entitiesData, entity)
+	else
+		removed = 0
 	end
+
+	global.entityCount = global.entityCount - removed
 end
 
 function Public.on_player_cursor_stack_changed(event)
+	if not global.setting_range_restriction then
+		return
+	end
+
 	local player = game.players[event.player_index]
 	if not player or not player.valid then
 		return
