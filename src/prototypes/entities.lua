@@ -1,6 +1,7 @@
 local compat = require("compat")
 local icons = require("entity_icons")
 local pictures = require("entity_pictures")
+local config = require("config")
 
 
 -- We copy certain properties from the vanilla steel chest and storage tank
@@ -196,7 +197,7 @@ subspace_interactor_entity {
 		open_sound = storage_tank.open_sound,
 		close_sound = storage_tank.close_sound,
 		animation = pictures["subspace-fluid-extractor"],
-		crafting_categories = {CRAFTING_FLUID_CATEGORY_NAME},
+		crafting_categories = {config.CRAFTING_FLUID_CATEGORY_NAME},
 		crafting_speed = 1,
 		energy_source = {
 			type = "electric",

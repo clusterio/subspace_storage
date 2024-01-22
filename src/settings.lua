@@ -1,4 +1,4 @@
-require("config")
+local config = require("config")
 
 data:extend {
 	{
@@ -29,7 +29,7 @@ data:extend {
 		name = "subspace_storage-max-electricity",
 		setting_type = "runtime-global",
 		order = "b3",
-		default_value = 100000000000000 / ELECTRICITY_RATIO --100TJ assuming a ratio of 1.000.000
+		default_value = 100000000000000 / config.ELECTRICITY_RATIO --100TJ assuming a ratio of 1.000.000
 	},
 	{
 		type = "bool-setting",

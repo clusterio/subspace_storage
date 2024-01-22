@@ -1,5 +1,5 @@
 require("util")
-require("config")
+local config = require("config")
 
 require("prototypes/entities")
 
@@ -39,7 +39,7 @@ data:extend(
 {
 	{
 		type = "recipe-category",
-		name = CRAFTING_FLUID_CATEGORY_NAME
+		name = config.CRAFTING_FLUID_CATEGORY_NAME
 	}
 })
 
@@ -80,8 +80,8 @@ data:extend{
 -- Inventory Combinator
 local inv = table.deepcopy(data.raw["constant-combinator"]["constant-combinator"])
 local tint = { r = 100, g = 200, b = 255, a = 255 }
-inv.name = INV_COMBINATOR_NAME
-inv.minable.result = INV_COMBINATOR_NAME
+inv.name = config.INV_COMBINATOR_NAME
+inv.minable.result = config.INV_COMBINATOR_NAME
 inv.item_slot_count = 2000
 for _, sprite in pairs(inv.sprites) do
 	sprite.layers[1].tint = tint
@@ -91,7 +91,7 @@ data:extend{
 	inv,
 	{
 		type = "item",
-		name = INV_COMBINATOR_NAME,
+		name = config.INV_COMBINATOR_NAME,
 		icons = {
 			{
 				icon = inv.icon,
@@ -101,20 +101,20 @@ data:extend{
 		icon_size = inv.icon_size,
 		flags = {},
 		subgroup = "subspace_storage-interactor",
-		place_result=INV_COMBINATOR_NAME,
-		order = "c[" .. INV_COMBINATOR_NAME .. "]",
+		place_result=config.INV_COMBINATOR_NAME,
+		order = "c[" .. config.INV_COMBINATOR_NAME .. "]",
 		stack_size = 50,
 	},
 	{
 		type = "recipe",
-		name = INV_COMBINATOR_NAME,
+		name = config.INV_COMBINATOR_NAME,
 		enabled = true, -- TODO do this on a tech somewhere
 		ingredients =
 		{
 			{"constant-combinator", 1},
 			{"electronic-circuit", 50}
 		},
-		result = INV_COMBINATOR_NAME,
+		result = config.INV_COMBINATOR_NAME,
 		requester_paste_multiplier = 1
 	},
 }
