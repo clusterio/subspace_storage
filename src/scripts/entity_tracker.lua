@@ -100,6 +100,11 @@ local function isOutsideRestrictions(entity, player)
 end
 
 local function AbortEntityBuilding(entity, player, errorCode)
+	if entity.name ~= "entity-ghost" then
+		-- increment entityCount by 1 because destroying a phisical entity will remove 1
+		global.entityCount = global.entityCount + 1
+	end
+
 	if player and player.valid then
 		local width = global.setting_zone_width
 		local height = global.setting_zone_height
@@ -112,7 +117,7 @@ local function AbortEntityBuilding(entity, player, errorCode)
 			},
 			["built-entity-limit-exceeded"] = {
 				"subspace_storage.built-entity-limit-exceeded",
-				global.entityCount, global.setting_entity_limit
+				global.entityCount - 1, global.setting_entity_limit
 			},
 			["default"] = {
 				"subspace_storage.default-warning"
@@ -121,11 +126,6 @@ local function AbortEntityBuilding(entity, player, errorCode)
 
 		-- Tell the player what is happening
 		player.print(messages[errorCode])
-
-		if entity.name ~= "entity-ghost" then
-			-- increment entityCount by 1 because destroying a phisical entity will remove 1
-			global.entityCount = global.entityCount + 1
-		end
 
 		-- kill entity, try to give it back to the player though
 		if compat.version_ge(1, 0) then
