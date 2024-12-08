@@ -3,6 +3,7 @@ require("config")
 local mod_gui = require("mod-gui")
 
 local clusterio_api = require("__clusterio_lib__/api")
+local lib_compat = require("__clusterio_lib__/compat")
 
 local compat = require("compat")
 
@@ -58,7 +59,7 @@ function OnBuiltEntity(event)
 					})
 				end
 				-- kill entity, try to give it back to the player though
-				if compat.version_ge("1.0.0") then
+				if lib_compat.version_ge("1.0.0") then
 					local inventory = game.create_inventory(1)
 					entity.mine {
 						inventory = inventory,
@@ -82,7 +83,7 @@ function OnBuiltEntity(event)
 				end
 			else
 				-- it wasn't placed by a player, we can't tell em whats wrong
-				if compat.version_ge("1.0.0") then
+				if lib_compat.version_ge("1.0.0") then
 					entity.mine()
 				else
 					entity.destroy()
@@ -230,7 +231,7 @@ end
 ------------------------------
 script.on_init(function()
 	-- 2.0 compatibility
-	if compat.version_ge("2.0.0") then
+	if lib_compat.version_ge("2.0.0") then
 		global = storage
 	end
 	clusterio_api.init()
@@ -240,7 +241,7 @@ end)
 
 script.on_load(function()
 	-- 2.0 compatibility
-	if compat.version_ge("2.0.0") then
+	if lib_compat.version_ge("2.0.0") then
 		global = storage
 	end
 	clusterio_api.init()
@@ -632,7 +633,7 @@ function GetOutputChestRequest(requests, entityData)
 				local missingAmount = requestItem.count - itemsInChest
 				--But don't request more than the chest can hold
 				local stackSize
-				if compat.version_ge("2.0.0") then
+				if lib_compat.version_ge("2.0.0") then
 					stackSize = prototypes.item[requestItem.name].stack_size
 				else
 					stackSize = game.item_prototypes[requestItem.name].stack_size
@@ -854,7 +855,7 @@ function ExportOutputList()
 end
 
 function Import(data)
-	local items = game.json_to_table(data)
+	local items = lib_compat.json_to_table(data)
 	for _, item in ipairs(items) do
 		GiveItemsToStorage(item[1], item[2])
 	end
@@ -864,7 +865,7 @@ function UpdateInvData(data, full)
 	if full then
 		global.invdata = {}
 	end
-	local items = game.json_to_table(data)
+	local items = lib_compat.json_to_table(data)
 	for _, item in ipairs(items) do
 		global.invdata[item[1]] = item[2]
 	end
@@ -924,9 +925,9 @@ function UpdateInvCombinators()
 		table.insert(invframe,{count=instance_id,index=#invframe+1,signal={name="signal-localid",type="virtual"}})
 	end
 
-	local items = compat.version_ge("2.0.0") and prototypes.item or game.item_prototypes
-	local fluids = compat.version_ge("2.0.0") and prototypes.fluid or game.fluid_prototypes
-	local virtuals = compat.version_ge("2.0.0") and prototypes.virtual_signal or game.virtual_signal_prototypes
+	local items = lib_compat.version_ge("2.0.0") and prototypes.item or game.item_prototypes
+	local fluids = lib_compat.version_ge("2.0.0") and prototypes.fluid or game.fluid_prototypes
+	local virtuals = lib_compat.version_ge("2.0.0") and prototypes.virtual_signal or game.virtual_signal_prototypes
 	if global.invdata then
 		for name, count in pairs(global.invdata) do
 			-- Combinator signals are limited to a max value of 2^31-1
@@ -1240,7 +1241,7 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
 		end
 	else
 		if global.zoneDraw[event.player_index] then
-			if compat.version_ge("2.0.0") then
+			if lib_compat.version_ge("2.0.0") then
 				global.zoneDraw[event.player_index].destroy()
 			else
 				rendering.destroy(global.zoneDraw[event.player_index])
