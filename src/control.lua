@@ -631,7 +631,12 @@ function GetOutputChestRequest(requests, entityData)
 				--If there isn't enough items in the chest
 				local missingAmount = requestItem.count - itemsInChest
 				--But don't request more than the chest can hold
-				local stackSize = game.item_prototypes[requestItem.name].stack_size
+				local stackSize
+				if compat.version_ge("2.0.0") then
+					stackSize = prototypes.item[requestItem.name].stack_size
+				else
+					stackSize = game.item_prototypes[requestItem.name].stack_size
+				end
 				missingAmount = math.min(missingAmount, slotsLeft * stackSize)
 				if missingAmount > 0 then
 					slotsLeft = slotsLeft - math.ceil(missingAmount / stackSize)
@@ -919,9 +924,9 @@ function UpdateInvCombinators()
 		table.insert(invframe,{count=instance_id,index=#invframe+1,signal={name="signal-localid",type="virtual"}})
 	end
 
-	local items = game.item_prototypes
-	local fluids = game.fluid_prototypes
-	local virtuals = game.virtual_signal_prototypes
+	local items = compat.version_ge("2.0.0") and prototypes.item or game.item_prototypes
+	local fluids = compat.version_ge("2.0.0") and prototypes.fluid or game.fluid_prototypes
+	local virtuals = compat.version_ge("2.0.0") and prototypes.virtual_signal or game.virtual_signal_prototypes
 	if global.invdata then
 		for name, count in pairs(global.invdata) do
 			-- Combinator signals are limited to a max value of 2^31-1
