@@ -1235,7 +1235,11 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
 		end
 	else
 		if global.zoneDraw[event.player_index] then
-			rendering.destroy(global.zoneDraw[event.player_index])
+			if compat.version_ge(2, 0) then
+				global.zoneDraw[event.player_index].destroy()
+			else
+				rendering.destroy(global.zoneDraw[event.player_index])
+			end
 			global.zoneDraw[event.player_index] = nil
 		end
 	end
