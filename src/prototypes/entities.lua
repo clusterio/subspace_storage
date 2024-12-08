@@ -2,6 +2,19 @@ local compat = require("compat")
 local icons = require("entity_icons")
 local pictures = require("entity_pictures")
 
+-- Transform pictures to always use hr_version layer in 2.0
+if compat.version_ge(2, 0) then
+	for key, value in pairs(pictures) do
+		for _, layer in pairs(value.layers) do
+			if layer.hr_version then
+				for property, value in pairs(layer.hr_version) do
+					layer[property] = value
+				end
+				layer.hr_version = nil
+			end
+		end
+	end
+end
 
 -- We copy certain properties from the vanilla steel chest and storage tank
 local steel_chest = data.raw["container"]["steel-chest"]
