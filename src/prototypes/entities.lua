@@ -79,7 +79,7 @@ local function subspace_interactor_entity(options)
 			name = options.name,
 			enabled = true,
 			ingredients = options.ingredients,
-			result = options.name,
+			results = {{type = "item", name = options.name, amount = 1}},
 			requester_paste_multiplier = options.requester_paste_multiplier or 4,
 		},
 		{
@@ -101,8 +101,8 @@ end
 ---------------------------------
 
 local standard_recipe = {
-	{"steel-chest", 1},
-	{"electronic-circuit", 50}
+	{type = "item", name = "steel-chest", amount = 1},
+	{type = "item", name = "electronic-circuit", amount = 50}
 }
 
 subspace_interactor_entity {
@@ -223,14 +223,26 @@ subspace_interactor_entity {
 	},
 }
 
+local electricity_injector_ingredients = {
+	{type = "item", name = "accumulator", amount = 2000},
+	{type = "item", name = "advanced-circuit", amount = 50},
+	{type = "item", name = "substation", amount = 50},
+}
+if compat.version_ge(2, 0) then
+	-- The ingredients previously used for the satellite
+	electricity_injector_ingredients[1].amount = 2100 -- add 100 to the accumulator amount
+	table.insert(electricity_injector_ingredients, {type = "item", name = "low-density-structure", amount = 100})
+	table.insert(electricity_injector_ingredients, {type = "item", name = "processing-unit", amount = 100})
+	table.insert(electricity_injector_ingredients, {type = "item", name = "radar", amount = 100})
+	table.insert(electricity_injector_ingredients, {type = "item", name = "rocket-fuel", amount = 50})
+	table.insert(electricity_injector_ingredients, {type = "item", name = "solar-panel", amount = 100})
+else
+	table.insert(electricity_injector_ingredients, {type = "item", name = "satellite", amount = 1})
+end
+
 subspace_interactor_entity {
 	name = "subspace-electricity-injector",
-	ingredients = {
-		{"accumulator", 2000},
-		{"advanced-circuit", 50},
-		{"substation", 50},
-		{"satellite", 1}
-	},
+	ingredients = electricity_injector_ingredients,
 	requester_paste_multiplier = 1,
 	subgroup = "subspace_storage-interactor",
 	order = "a[injector]-c[subspace-electricity-injector]",
@@ -262,12 +274,7 @@ subspace_interactor_entity {
 
 subspace_interactor_entity {
 	name = "subspace-electricity-extractor",
-	ingredients = {
-		{"accumulator", 2000},
-		{"advanced-circuit", 50},
-		{"substation", 50},
-		{"satellite", 1}
-	},
+	ingredients = electricity_injector_ingredients,
 	requester_paste_multiplier = 1,
 	subgroup = "subspace_storage-interactor",
 	order = "b[extractor]-c[subspace-electricity-extractor]",
