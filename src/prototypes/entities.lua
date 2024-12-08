@@ -23,22 +23,44 @@ local storage_tank = data.raw["storage-tank"]["storage-tank"]
 -- Circuit connector helpers are defined in lualib/circuit-connector-sprites
 -- but due to the shared lua env for data stage it just exists as a global.
 local connector_definition = { variation = 25, main_offset = {1.875, 1}, shadow_offset = {4.5, 2.5625} }
-local interactor_circuit_connector_1_way = circuit_connector_definitions.create(
-	universal_connector_template,
-	{
-		connector_definition,
-	}
-)
 
-local interactor_circuit_connector_4_way = circuit_connector_definitions.create(
-	universal_connector_template,
-	{
-		connector_definition,
-		connector_definition,
-		connector_definition,
-		connector_definition,
-	}
-)
+local interactor_circuit_connector_1_way
+if compat.version_ge(2, 0) then
+	interactor_circuit_connector_1_way = circuit_connector_definitions.create_single(
+		universal_connector_template,
+		connector_definition
+	)
+else
+	interactor_circuit_connector_1_way = circuit_connector_definitions.create(
+		universal_connector_template,
+		{
+			connector_definition,
+		}
+	)
+end
+
+local interactor_circuit_connector_4_way
+if compat.version_ge(2, 0) then
+	interactor_circuit_connector_4_way = circuit_connector_definitions.create_vector(
+		universal_connector_template,
+		{
+			connector_definition,
+			connector_definition,
+			connector_definition,
+			connector_definition,
+		}
+	)
+else
+	interactor_circuit_connector_4_way = circuit_connector_definitions.create(
+		universal_connector_template,
+		{
+			connector_definition,
+			connector_definition,
+			connector_definition,
+			connector_definition,
+		}
+	)
+end
 
 
 local function subspace_interactor_entity(options)
@@ -59,14 +81,19 @@ local function subspace_interactor_entity(options)
 			{ type = "impact", percent = 60 },
 		},
 		fast_replaceable_group = "subspace-interactor",
-		vehicle_impact_sound = steel_chest.vehicle_impact_sound,
+		vehicle_impact_sound = steel_chest.vehicle_impact_sound, -- pre 2.0
+		impact_category = steel_chest.impact_category, -- 2.0+
 	}
 
 	if options.circuit_connector then
-		entity.circuit_wire_connection_points = options.circuit_connector.points
-		entity.circuit_wire_connection_point = options.circuit_connector.points
-		entity.circuit_connector_sprites = options.circuit_connector.sprites
-		entity.circuit_wire_max_distance = 9
+		if compat.version_ge(2, 0) then
+			entity.circuit_connector = options.circuit_connector
+		else
+			entity.circuit_wire_connection_points = options.circuit_connector.points
+			entity.circuit_wire_connection_point = options.circuit_connector.points
+			entity.circuit_connector_sprites = options.circuit_connector.sprites
+			entity.circuit_wire_max_distance = 9
+		end
 	end
 
 	for key, value in pairs(options.entity_properties) do
@@ -86,7 +113,7 @@ local function subspace_interactor_entity(options)
 			type = "item",
 			name = options.name,
 			icon = icons[options.name],
-			icon_size = 64, icon_mipmaps = 4,
+			icon_size = 64,
 			subgroup = options.subgroup,
 			order = options.order,
 			place_result = options.name,
@@ -149,17 +176,29 @@ subspace_interactor_entity {
 		type = "storage-tank",
 		fluid_box = {
 			production_type = "input",
-			base_area = 250,
+			base_area = not compat.version_ge(2, 0) and 250 or nil,
+			volume = compat.version_ge(2, 0) and 250 or nil,
 			pipe_covers = pipecoverspictures(),
-			pipe_connections = {
-				{ type = "input", position = {-4.5, -2.5} },
-				{ type = "input", position = {-4.5, 2.5} },
-				{ type = "input", position = {-2.5, 4.5} },
-				{ type = "input", position = {2.5, 4.5} },
-				{ type = "input", position = {4.5, 2.5} },
-				{ type = "input", position = {4.5, -2.5} },
-				{ type = "input", position = {2.5, -4.5} },
-				{ type = "input", position = {-2.5, -4.5} },
+			pipe_connections = compat.version_ge(2, 0) and {
+				-- 2.0 requires direction to be specified. The coordinate system is positive down and to the right.
+				-- In 2.0 the pipe connections are also moved 1 tile closer to the center of the entity.
+				{ position = {-3.5, -2.5}, direction = defines.direction.west },
+				{ position = {-3.5, 2.5}, direction = defines.direction.west },
+				{ position = {-2.5, 3.5}, direction = defines.direction.south },
+				{ position = {2.5, 3.5}, direction = defines.direction.south },
+				{ position = {3.5, 2.5}, direction = defines.direction.east },
+				{ position = {3.5, -2.5}, direction = defines.direction.east },
+				{ position = {2.5, -3.5}, direction = defines.direction.north },
+				{ position = {-2.5, -3.5}, direction = defines.direction.north },
+			} or {
+				{ type = "output", position = {-4.5, -2.5} },
+				{ type = "output", position = {-4.5, 2.5} },
+				{ type = "output", position = {-2.5, 4.5} },
+				{ type = "output", position = {2.5, 4.5} },
+				{ type = "output", position = {4.5, 2.5} },
+				{ type = "output", position = {4.5, -2.5} },
+				{ type = "output", position = {2.5, -4.5} },
+				{ type = "output", position = {-2.5, -4.5} },
 			},
 		},
 		window_bounding_box = {{-0.125, 0.6875}, {0.1875, 1.1875}},
@@ -190,9 +229,21 @@ subspace_interactor_entity {
 			{
 				production_type = "output",
 				pipe_covers = pipecoverspictures(),
-				base_area = 250,
-				base_level = 1,
-				pipe_connections = {
+				base_area = not compat.version_ge(2, 0) and 250 or nil,
+				base_level = not compat.version_ge(2, 0) and 1 or nil,
+				volume = compat.version_ge(2, 0) and 250 * 1 or nil,
+				pipe_connections = compat.version_ge(2, 0) and {
+					-- 2.0 requires direction to be specified. The coordinate system is positive down and to the right.
+					-- In 2.0 the pipe connections are also moved 1 tile closer to the center of the entity.
+					{ flow_direction = "output", position = {-3.5, -2.5}, direction = defines.direction.west },
+					{ flow_direction = "output", position = {-3.5, 2.5}, direction = defines.direction.west },
+					{ flow_direction = "output", position = {-2.5, 3.5}, direction = defines.direction.south },
+					{ flow_direction = "output", position = {2.5, 3.5}, direction = defines.direction.south },
+					{ flow_direction = "output", position = {3.5, 2.5}, direction = defines.direction.east },
+					{ flow_direction = "output", position = {3.5, -2.5}, direction = defines.direction.east },
+					{ flow_direction = "output", position = {2.5, -3.5}, direction = defines.direction.north },
+					{ flow_direction = "output", position = {-2.5, -3.5}, direction = defines.direction.north },
+				} or {
 					{ type = "output", position = {-4.5, -2.5} },
 					{ type = "output", position = {-4.5, 2.5} },
 					{ type = "output", position = {-2.5, 4.5} },
@@ -203,18 +254,22 @@ subspace_interactor_entity {
 					{ type = "output", position = {-2.5, -4.5} },
 				},
 			},
-			off_when_no_fluid_recipe = false,
+			off_when_no_fluid_recipe = not compat.version_ge(2, 0) and false or nil,
 		},
+		fluid_boxes_off_when_no_fluid_recipe = compat.version_ge(2, 0) and false or nil,
 		working_sound = nil,
 		open_sound = storage_tank.open_sound,
 		close_sound = storage_tank.close_sound,
-		animation = pictures["subspace-fluid-extractor"],
+		animation = not compat.version_ge(2, 0) and pictures["subspace-fluid-extractor"] or nil,
+		graphics_set = compat.version_ge(2, 0) and {
+			animation = pictures["subspace-fluid-extractor"],
+		} or nil,
 		crafting_categories = {CRAFTING_FLUID_CATEGORY_NAME},
 		crafting_speed = 1,
 		energy_source = {
 			type = "electric",
 			usage_priority = "secondary-input",
-			emissions_per_minute = 2,
+			emissions_per_minute = compat.version_ge(2, 0) and { pollution = 2 } or 2,
 		},
 		energy_usage = "1kW",
 		ingredient_count = 1,
@@ -256,14 +311,24 @@ subspace_interactor_entity {
 			input_flow_limit = "1GW",
 			output_flow_limit = "0kW"
 		},
-		picture = pictures["subspace-electricity-injector"],
+		chargable_graphics = compat.version_ge(2, 0) and {
+			picture = pictures["subspace-electricity-injector"],
+			charge_animation = nil,
+			charge_cooldown = 30,
+			charge_light = nil,
+			discharge_animation = nil,
+			discharge_cooldown = 60,
+			discharge_light = nil,
+		} or nil,
+		-- pre 2.0 properties
+		picture = not compat.version_ge(2, 0) and pictures["subspace-electricity-injector"] or nil,
 		charge_animation = nil,
-		water_reflection = nil,
 		charge_cooldown = 30,
 		charge_light = nil,
 		discharge_animation = nil,
 		discharge_cooldown = 60,
 		discharge_light = nil,
+		water_reflection = nil,
 		open_sound = storage_tank.open_sound,
 		close_sound = storage_tank.close_sound,
 		working_sound = nil,
@@ -288,14 +353,24 @@ subspace_interactor_entity {
 			input_flow_limit = "0kW",
 			output_flow_limit = "1GW"
 		},
-		picture = pictures["subspace-electricity-extractor"],
+		chargable_graphics = compat.version_ge(2, 0) and {
+			picture = pictures["subspace-electricity-extractor"],
+			charge_animation = nil,
+			charge_cooldown = 30,
+			charge_light = nil,
+			discharge_animation = nil,
+			discharge_cooldown = 60,
+			discharge_light = nil,
+		} or nil,
+		-- pre 2.0 properties
+		picture = not compat.version_ge(2, 0) and pictures["subspace-electricity-extractor"] or nil,
 		charge_animation = nil,
-		water_reflection = nil,
 		charge_cooldown = 30,
 		charge_light = nil,
 		discharge_animation = nil,
 		discharge_cooldown = 60,
 		discharge_light = nil,
+		water_reflection = nil,
 		open_sound = storage_tank.open_sound,
 		close_sound = storage_tank.close_sound,
 		working_sound = nil,
