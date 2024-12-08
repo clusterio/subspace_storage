@@ -58,7 +58,7 @@ function OnBuiltEntity(event)
 					})
 				end
 				-- kill entity, try to give it back to the player though
-				if compat.version_ge(1, 0) then
+				if compat.version_ge("1.0.0") then
 					local inventory = game.create_inventory(1)
 					entity.mine {
 						inventory = inventory,
@@ -82,7 +82,7 @@ function OnBuiltEntity(event)
 				end
 			else
 				-- it wasn't placed by a player, we can't tell em whats wrong
-				if compat.version_ge(1, 0) then
+				if compat.version_ge("1.0.0") then
 					entity.mine()
 				else
 					entity.destroy()
@@ -230,7 +230,7 @@ end
 ------------------------------
 script.on_init(function()
 	-- 2.0 compatibility
-	if compat.version_ge(2, 0) then
+	if compat.version_ge("2.0.0") then
 		global = storage
 	end
 	clusterio_api.init()
@@ -240,7 +240,7 @@ end)
 
 script.on_load(function()
 	-- 2.0 compatibility
-	if compat.version_ge(2, 0) then
+	if compat.version_ge("2.0.0") then
 		global = storage
 	end
 	clusterio_api.init()
@@ -1235,7 +1235,7 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
 		end
 	else
 		if global.zoneDraw[event.player_index] then
-			if compat.version_ge(2, 0) then
+			if compat.version_ge("2.0.0") then
 				global.zoneDraw[event.player_index].destroy()
 			else
 				rendering.destroy(global.zoneDraw[event.player_index])
