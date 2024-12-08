@@ -229,12 +229,20 @@ end
 --[[Thing resetting events]]--
 ------------------------------
 script.on_init(function()
+	-- 2.0 compatibility
+	if compat.version_ge(2, 0) then
+		global = storage
+	end
 	clusterio_api.init()
 	RegisterClusterioEvents()
 	Reset()
 end)
 
 script.on_load(function()
+	-- 2.0 compatibility
+	if compat.version_ge(2, 0) then
+		global = storage
+	end
 	clusterio_api.init()
 	RegisterClusterioEvents()
 end)
