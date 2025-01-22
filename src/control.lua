@@ -877,8 +877,8 @@ end
 
 function ExportOutputList()
 	local items = {}
-	for name, count in pairs(global.outputList) do
-		for quality, count in pairs(count) do
+	for name, qualities in pairs(global.outputList) do
+		for quality, count in pairs(qualities) do
 			table.insert(items, {name, count, quality})
 		end
 	end
