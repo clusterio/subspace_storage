@@ -867,7 +867,7 @@ function UpdateInvData(data, full)
 	end
 	local items = lib_compat.json_to_table(data)
 	for _, item in ipairs(items) do
-		global.invdata[item[1]] = item[2]
+		global.invdata[item[1]..":"..item[3]] = item
 	end
 	UpdateInvCombinators()
 end
@@ -929,26 +929,56 @@ function UpdateInvCombinators()
 	local fluids = lib_compat.version_ge("2.0.0") and prototypes.fluid or game.fluid_prototypes
 	local virtuals = lib_compat.version_ge("2.0.0") and prototypes.virtual_signal or game.virtual_signal_prototypes
 	if global.invdata then
-		for name, count in pairs(global.invdata) do
+		for identifier, data in pairs(global.invdata) do
+			-- If data is a number, then its still in the pre 2.0 format - force delete to migrate to new format
+			if type(data) == "number" then
+				global.invdata = {}
+				return
+			end
 			-- Combinator signals are limited to a max value of 2^31-1
-			count = math.min(count, 0x7fffffff)
-			if items[name] then
-				invframe[#invframe+1] = {count=count,index=#invframe+1,signal={name=name,type="item"}}
-			elseif fluids[name] then
-				invframe[#invframe+1] = {count=count,index=#invframe+1,signal={name=name,type="fluid"}}
-			elseif virtuals[name] then
-				invframe[#invframe+1] = {count=count,index=#invframe+1,signal={name=name,type="virtual"}}
+			local name = data[1]
+			local count = math.min(data[2], 0x7fffffff)
+			local quality = data[3]
+			-- Split code for 1.1 and 2.0
+			if lib_compat.version_ge("2.0.0") then
+				if items[name] then
+					invframe[#invframe+1] = {min=count, value={type="item", name=name, quality=quality}}
+				elseif fluids[name] then
+					invframe[#invframe+1] = {min=count, value={type="fluid", name=name, quality=quality}}
+				elseif virtuals[name] then
+					invframe[#invframe+1] = {min=count, value={type="virtual", name=name, quality=quality}}
+				end
+			else
+				-- Combinator signals are limited to a max value of 2^31-1
+				if items[name] then
+					invframe[#invframe+1] = {count=count, index=#invframe+1, signal={name=name, type="item"}}
+				elseif fluids[name] then
+					invframe[#invframe+1] = {count=count, index=#invframe+1, signal={name=name, type="fluid"}}
+				elseif virtuals[name] then
+					invframe[#invframe+1] = {count=count, index=#invframe+1, signal={name=name, type="virtual"}}
+				end
 			end
 		end
 	end
 
 	for i,invControl in pairs(global.invControls) do
-		if invControl.valid then
-			compat.set_parameters(invControl, invframe)
-			invControl.enabled=true
+		if lib_compat.version_ge("2.0.0") then
+			if invControl.valid then
+				local section = invControl.get_section(1)
+				if section == nil then
+					section = invControl.add_section()
+				end
+				section.filters = invframe
+				section.active = true
+				invControl.enabled = true
+			end
+		else
+			if invControl.valid then
+				compat.set_parameters(invControl, invframe)
+				invControl.enabled=true
+			end
 		end
 	end
-
 end
 
 
