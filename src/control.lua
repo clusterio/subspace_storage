@@ -593,7 +593,12 @@ function HandleInputTank(entityData)
 					fluid.amount = fluid.amount - fluid_taken
 					fluidbox[1] = fluid
 				else
-					if entity.get_merged_signal({name="signal-P",type="virtual"}) == 1 then
+					local signal = entity.get_signal(
+						{name = "signal-P", type = "virtual"},
+						defines.wire_connector_id.circuit_red,
+						defines.wire_connector_id.circuit_green
+					)
+					if signal == 1 then
 						fluidbox[1] = nil
 					end
 				end
@@ -695,7 +700,7 @@ function GetOutputTankRequest(requests, entityData)
 				fluid = {name = fluidName, amount = 0}
 			end
 
-			local missingFluid = math.max(math.ceil(MAX_FLUID_AMOUNT - fluid.amount), 0)
+			local missingFluid = math.max(math.ceil(fluidbox.get_capacity(1) - fluid.amount), 0)
 			--If the entity is missing fluid than add a request for fluid
 			if missingFluid > 0 then
 				local entry = AddRequestToTable(requests, fluidName, missingFluid, entity)

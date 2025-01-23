@@ -176,8 +176,8 @@ subspace_interactor_entity {
 		type = "storage-tank",
 		fluid_box = {
 			production_type = "input",
-			base_area = not compat.version_ge(2, 0) and 250 or nil,
-			volume = compat.version_ge(2, 0) and 250 or nil,
+			base_area = not compat.version_ge(2, 0) and MAX_FLUID_AMOUNT or nil,
+			volume = compat.version_ge(2, 0) and MAX_FLUID_AMOUNT or nil,
 			pipe_covers = pipecoverspictures(),
 			pipe_connections = compat.version_ge(2, 0) and {
 				-- 2.0 requires direction to be specified. The coordinate system is positive down and to the right.
@@ -229,9 +229,9 @@ subspace_interactor_entity {
 			{
 				production_type = "output",
 				pipe_covers = pipecoverspictures(),
-				base_area = not compat.version_ge(2, 0) and 250 or nil,
+				base_area = not compat.version_ge(2, 0) and MAX_FLUID_AMOUNT or nil,
 				base_level = not compat.version_ge(2, 0) and 1 or nil,
-				volume = compat.version_ge(2, 0) and 250 * 1 or nil,
+				volume = compat.version_ge(2, 0) and MAX_FLUID_AMOUNT * 1 or nil,
 				pipe_connections = compat.version_ge(2, 0) and {
 					-- 2.0 requires direction to be specified. The coordinate system is positive down and to the right.
 					-- In 2.0 the pipe connections are also moved 1 tile closer to the center of the entity.
