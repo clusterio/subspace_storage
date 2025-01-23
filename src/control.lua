@@ -325,7 +325,7 @@ function Reset()
 		requestsLL = nil
 	}
 
-	gbal.iutTanksData =
+	global.inputTanksData =
 	{
 		entitiesData = { pos = 0 },
 	}
@@ -348,7 +348,7 @@ function Reset()
 	}
 	global.lastElectricityUpdate = 0
 
-	gl.invControls = {}
+	global.invControls = {}
 
 	AddAllEntitiesOfNames(
 	{
@@ -1062,7 +1062,7 @@ function RequestItemsFromUseableStorage(itemName, itemCount, quality)
 end
 
 function GetInitialItemCount(itemName, quality)
-	--this method is used so the mod knows hopw to distribute
+	--this method is used so the mod knows how to distribute
 	--the items between all entities. If infinite resources is enabled
 	--then all entities should get their requests fulfilled-
 	--To simulate that this method returns 1mil which should be enough
