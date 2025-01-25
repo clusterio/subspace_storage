@@ -593,11 +593,16 @@ function HandleInputTank(entityData)
 					fluid.amount = fluid.amount - fluid_taken
 					fluidbox[1] = fluid
 				else
-					local signal = entity.get_signal(
-						{name = "signal-P", type = "virtual"},
-						defines.wire_connector_id.circuit_red,
-						defines.wire_connector_id.circuit_green
-					)
+					local signal
+					if lib_compat.version_ge("2.0.0") then
+						signal = entity.get_signal(
+							{name = "signal-P", type = "virtual"},
+							defines.wire_connector_id.circuit_red,
+							defines.wire_connector_id.circuit_green
+						)
+					else
+						signal = entity.get_merged_signal({name="signal-P",type="virtual"})
+					end
 					if signal == 1 then
 						fluidbox[1] = nil
 					end
@@ -965,9 +970,6 @@ function UpdateInvCombinators()
 		table.insert(invframe,{count=instance_id,index=#invframe+1,signal={name="signal-localid",type="virtual"}})
 	end
 
-	local items = lib_compat.version_ge("2.0.0") and prototypes.item or game.item_prototypes
-	local fluids = lib_compat.version_ge("2.0.0") and prototypes.fluid or game.fluid_prototypes
-	local virtuals = lib_compat.version_ge("2.0.0") and prototypes.virtual_signal or game.virtual_signal_prototypes
 	if global.invdata then
 		for _identifier, data in pairs(global.invdata) do
 			-- If data is a number, then its still in the pre 2.0 format - force delete to migrate to new format
@@ -981,20 +983,20 @@ function UpdateInvCombinators()
 			local quality = data[3]
 			-- Split code for 1.1 and 2.0
 			if lib_compat.version_ge("2.0.0") then
-				if items[name] then
+				if lib_compat.prototypes.item[name] then
 					invframe[#invframe+1] = {min=count, value={type="item", name=name, quality=quality}}
-				elseif fluids[name] then
+				elseif lib_compat.prototypes.fluid[name] then
 					invframe[#invframe+1] = {min=count, value={type="fluid", name=name, quality=quality}}
-				elseif virtuals[name] then
+				elseif lib_compat.prototypes.virtual_signal[name] then
 					invframe[#invframe+1] = {min=count, value={type="virtual", name=name, quality=quality}}
 				end
 			else
 				-- Combinator signals are limited to a max value of 2^31-1
-				if items[name] then
+				if lib_compat.prototypes.item[name] then
 					invframe[#invframe+1] = {count=count, index=#invframe+1, signal={name=name, type="item"}}
-				elseif fluids[name] then
+				elseif lib_compat.prototypes.fluid[name] then
 					invframe[#invframe+1] = {count=count, index=#invframe+1, signal={name=name, type="fluid"}}
-				elseif virtuals[name] then
+				elseif lib_compat.prototypes.virtual_signal[name] then
 					invframe[#invframe+1] = {count=count, index=#invframe+1, signal={name=name, type="virtual"}}
 				end
 			end
