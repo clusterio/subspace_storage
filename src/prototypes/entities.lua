@@ -67,7 +67,7 @@ local function subspace_interactor_entity(options)
 	local entity = {
 		name = options.name,
 		icon = icons[options.name],
-		icon_size = 64, icon_mipmaps = 4,
+		icon_size = 256, icon_mipmaps = 4,
 		flags = {"placeable-player", "player-creation"},
 		minable = { mining_time = 4, result = options.name },
 		max_health = 500,
@@ -113,7 +113,7 @@ local function subspace_interactor_entity(options)
 			type = "item",
 			name = options.name,
 			icon = icons[options.name],
-			icon_size = 64,
+			icon_size = 256,
 			subgroup = options.subgroup,
 			order = options.order,
 			place_result = options.name,

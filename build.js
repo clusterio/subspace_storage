@@ -96,86 +96,123 @@ async function main() {
 }
 
 async function post_process(args) {
-	// Tint emission layer to grayscale - used for ingame tint of purple entities
-	const grayscaleTasks = [{
-		src: path.join(args.sourceDir, "graphics", "entity", "item", "item-extractor-hr-emission-1.png"),
-		dst: path.join(args.sourceDir, "graphics", "entity", "item", "item-extractor-hr-emission-1-grayscale.png"),
-	}, {
-		src: path.join(args.sourceDir, "graphics", "entity", "fluid", "fluid-extractor-hr-emission-1.png"),
-		dst: path.join(args.sourceDir, "graphics", "entity", "fluid", "fluid-extractor-hr-emission-1-grayscale.png"),
-	}, {
-		src: path.join(args.sourceDir, "graphics", "entity", "electricity", "electricity-extractor-hr-emission-1.png"),
-		dst: path.join(args.sourceDir, "graphics", "entity", "electricity", "electricity-extractor-hr-emission-1-grayscale.png"),
-	}]
-
-	for (const task of grayscaleTasks) {
-		await sharp(task.src).grayscale().toFile(task.dst);
-	}
+	const extractorComposite = {
+		modulate: { brightness: 1 },
+		tint: { r: 0, g: 50, b: 150 },
+		emissionTint: { r: 0, g: 50, b: 150 },
+		emissionBlend: "add",
+	};
+	const injectorComposite = {
+		modulate: { brightness: 1 },
+		tint: { r: 200, g: 0, b: 100 },
+		emissionTint: { r: 200, g: 0, b: 100 },
+		emissionModulate: { brightness: 0.8 },
+		emissionBlend: "add",
+	};
 
 	// Composite tinted emission layer over the base layer to create icons
 	const compositeTasks = [{
 		base: path.join(args.sourceDir, "graphics", "entity", "item", "item-extractor-hr-animation-1.png"),
-		layer: path.join(args.sourceDir, "graphics", "entity", "item", "item-extractor-hr-emission-1.png"),
+		layer: path.join(args.sourceDir, "graphics", "entity", "item", "item-extractor-ball.png"),
+		emission: path.join(args.sourceDir, "graphics", "entity", "item", "item-extractor-hr-emission-1.png"),
 		composite: path.join(args.sourceDir, "graphics", "entity", "item", "item-extractor-icon.png"),
+		...extractorComposite,
 	}, {
 		base: path.join(args.sourceDir, "graphics", "entity", "item", "item-extractor-hr-animation-1.png"),
-		layer: path.join(args.sourceDir, "graphics", "entity", "item", "item-extractor-hr-emission-1.png"),
-		modulate: { hue: 70, brightness: 0.8 },
-		tint: { r: 100, g: 0, b: 100 },
+		layer: path.join(args.sourceDir, "graphics", "entity", "item", "item-extractor-ball.png"),
+		emission: path.join(args.sourceDir, "graphics", "entity", "item", "item-extractor-hr-emission-1.png"),
 		composite: path.join(args.sourceDir, "graphics", "entity", "item", "item-injector-icon.png"),
+		...injectorComposite,
 	}, {
 		base: path.join(args.sourceDir, "graphics", "entity", "fluid", "fluid-extractor-hr-animation-1.png"),
-		layer: path.join(args.sourceDir, "graphics", "entity", "fluid", "fluid-extractor-hr-emission-1.png"),
+		layer: path.join(args.sourceDir, "graphics", "entity", "fluid", "fluid-extractor-ball.png"),
+		emission: path.join(args.sourceDir, "graphics", "entity", "fluid", "fluid-extractor-hr-emission-1.png"),
 		composite: path.join(args.sourceDir, "graphics", "entity", "fluid", "fluid-extractor-icon.png"),
+		...extractorComposite,
 	}, {
 		base: path.join(args.sourceDir, "graphics", "entity", "fluid", "fluid-extractor-hr-animation-1.png"),
-		layer: path.join(args.sourceDir, "graphics", "entity", "fluid", "fluid-extractor-hr-emission-1-grayscale.png"),
-		modulate: { hue: 70, brightness: 0.8 },
-		tint: { r: 100, g: 0, b: 100 },
+		layer: path.join(args.sourceDir, "graphics", "entity", "fluid", "fluid-extractor-ball.png"),
+		emission: path.join(args.sourceDir, "graphics", "entity", "fluid", "fluid-extractor-hr-emission-1.png"),
 		composite: path.join(args.sourceDir, "graphics", "entity", "fluid", "fluid-injector-icon.png"),
+		...injectorComposite,
 	}, {
 		base: path.join(args.sourceDir, "graphics", "entity", "electricity", "electricity-extractor-hr-animation-1.png"),
-		layer: path.join(args.sourceDir, "graphics", "entity", "electricity", "electricity-extractor-hr-emission-1.png"),
+		layer: path.join(args.sourceDir, "graphics", "entity", "electricity", "electricity-extractor-ball.png"),
+		emission: path.join(args.sourceDir, "graphics", "entity", "electricity", "electricity-extractor-hr-emission-1.png"),
 		composite: path.join(args.sourceDir, "graphics", "entity", "electricity", "electricity-extractor-icon.png"),
+		...extractorComposite,
 	}, {
 		base: path.join(args.sourceDir, "graphics", "entity", "electricity", "electricity-extractor-hr-animation-1.png"),
-		layer: path.join(args.sourceDir, "graphics", "entity", "electricity", "electricity-extractor-hr-emission-1.png"),
-		modulate: { hue: 70, brightness: 0.8 },
-		tint: { r: 100, g: 0, b: 100 },
+		layer: path.join(args.sourceDir, "graphics", "entity", "electricity", "electricity-extractor-ball.png"),
+		emission: path.join(args.sourceDir, "graphics", "entity", "electricity", "electricity-extractor-hr-emission-1.png"),
 		composite: path.join(args.sourceDir, "graphics", "entity", "electricity", "electricity-injector-icon.png"),
+		...injectorComposite,
 	}];
 
 	for (const task of compositeTasks) {
 		// Create a transparent background
-		const baseImage = await sharp(task.base)
-			.resize(64, 64);
+		const baseBuffer = await sharp(task.base)
+			.resize(256, 256)
+			.toBuffer();
 
 		// Load, resize, and process the layer image to 256x256
 		const layerBuffer = await sharp(task.layer)
-			.resize(64, 64)
+			.resize(256, 256)
 			.tint(task.tint)
 			.modulate(task.modulate || {})
 			.toBuffer();
 
-		// Create new image with transparent background and composite both layers
-		let compositeBuffer = await baseImage
-			.composite([{ input: layerBuffer, blend: "add" }])
-			.ensureAlpha(0)
-			.raw()
-			.toBuffer({ resolveWithObject: true });
-		// Loop over the pixels and replace black with transparency
-		for (let i = 0; i < compositeBuffer.data.length; i += 4) {
-			if (compositeBuffer.data[i] <= 10 && compositeBuffer.data[i + 1] <= 10 && compositeBuffer.data[i + 2] <= 10) {
-				compositeBuffer.data[i + 3] = 0;
-			}
+		// Load emission layer
+		const emissionBuffer = await sharp(task.emission)
+			.resize(256, 256)
+			.tint(task.emissionTint)
+			.modulate(task.emissionModulate || {})
+			.extractChannel('red') // Use red channel as alpha mask
+			.toBuffer();
+
+		const processedEmission = await sharp(task.emission)
+			.resize(256, 256)
+			.tint(task.emissionTint)
+			.modulate(task.emissionModulate || {})
+			.joinChannel(emissionBuffer) // Use the extracted channel as alpha
+			.toBuffer();
+		
+		// Darken center to create a black hole effect
+		const darkLayerExists = await fs.pathExists(task.dark);
+		let processedDark;
+		if (darkLayerExists) {
+			const darkLayer = await sharp(task.dark)
+				.resize(256, 256)
+				.extractChannel('red') // Use red channel as alpha mask
+				.toBuffer();
+	
+			processedDark = await sharp(task.dark)
+				.resize(256, 256)
+				.linear(-1, 255)
+				.joinChannel(darkLayer) // Use the extracted channel as alpha
+				.toBuffer();
 		}
-		await new sharp(compositeBuffer.data, {
-			raw: {
-				width: compositeBuffer.info.width,
-				height: compositeBuffer.info.height,
-				channels: compositeBuffer.info.channels
+
+		// Create new image with transparent background and composite both layers
+		const layers = [
+			{ input: baseBuffer },
+			{ input: layerBuffer, blend: "over" },
+			{ input: processedEmission, blend: task.emissionBlend },
+		];
+		if (darkLayerExists) {
+			layers.push({ input: processedDark, blend: "multiply" });
+		}
+		await sharp({
+			create: {
+				width: 256,
+				height: 256,
+				channels: 4,
+				background: { r: 0, g: 0, b: 0, alpha: 0 }
 			}
-		}).png().toFile(task.composite);
+		})
+			.composite(layers)
+			.png()
+			.toFile(task.composite);
 	}
 }
 
@@ -234,5 +271,7 @@ async function buildMod(args, info) {
 }
 
 if (module === require.main) {
-	main().catch(err => { console.log(err) });
+	(async () => {
+		await main().catch(err => { console.log(err) });
+	})();
 }
