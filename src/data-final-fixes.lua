@@ -1,7 +1,7 @@
 require("config")
 
 for k,v in pairs(data.raw.fluid) do
-	if not v.hidden then
+	if not v.hidden and not v.parameter == true then
 		data:extend(
 		{
 			{

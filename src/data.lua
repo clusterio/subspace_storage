@@ -85,7 +85,6 @@ inv.minable.result = INV_COMBINATOR_NAME
 inv.item_slot_count = 2000
 for _, sprite in pairs(inv.sprites) do
 	sprite.layers[1].tint = tint
-	sprite.layers[1].hr_version.tint = tint
 end
 data:extend{
 	inv,
@@ -111,10 +110,10 @@ data:extend{
 		enabled = true, -- TODO do this on a tech somewhere
 		ingredients =
 		{
-			{"constant-combinator", 1},
-			{"electronic-circuit", 50}
+			{type = "item", name = "constant-combinator", amount = 1},
+			{type = "item", name = "electronic-circuit", amount = 50}
 		},
-		result = INV_COMBINATOR_NAME,
+		results = {{type = "item", name = INV_COMBINATOR_NAME, amount = 1}},
 		requester_paste_multiplier = 1
 	},
 }

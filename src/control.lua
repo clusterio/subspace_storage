@@ -3,6 +3,7 @@ require("config")
 local mod_gui = require("mod-gui")
 
 local clusterio_api = require("__clusterio_lib__/api")
+local lib_compat = require("__clusterio_lib__/compat")
 
 local compat = require("compat")
 
@@ -21,11 +22,11 @@ local restrictedEntities = {
 --[[Method that handle creation and deletion of entities]]--
 ------------------------------------------------------------
 function OnBuiltEntity(event)
-	local entity = event.created_entity
+	-- renamed to .entity in 2.0
+	local entity = event.created_entity or event.entity
 	if not (entity and entity.valid) then return end
 
-	local player = false
-	if event.player_index then player = game.players[event.player_index] end
+	local player = event.player_index and game.get_player(event.player_index) or nil
 
 	local spawn
 	if player and player.valid then
@@ -58,7 +59,7 @@ function OnBuiltEntity(event)
 					})
 				end
 				-- kill entity, try to give it back to the player though
-				if compat.version_ge(1, 0) then
+				if lib_compat.version_ge("1.0.0") then
 					local inventory = game.create_inventory(1)
 					entity.mine {
 						inventory = inventory,
@@ -71,7 +72,14 @@ function OnBuiltEntity(event)
 							inventory[1].count = inventory[1].count - removed
 						end
 						if inventory[1].valid_for_read then
-							player.surface.spill_item_stack(player.position, inventory[1])
+							if lib_compat.version_ge("2.0.0") then
+								player.surface.spill_item_stack({
+									position = player.position,
+									stack = inventory[1],
+								})
+							else
+								player.surface.spill_item_stack(player.position, inventory[1])
+							end
 						end
 					end
 					inventory.destroy()
@@ -82,7 +90,7 @@ function OnBuiltEntity(event)
 				end
 			else
 				-- it wasn't placed by a player, we can't tell em whats wrong
-				if compat.version_ge(1, 0) then
+				if lib_compat.version_ge("1.0.0") then
 					entity.mine()
 				else
 					entity.destroy()
@@ -217,7 +225,6 @@ script.on_event(defines.events.script_raised_destroy, function(event)
 end)
 
 
-
 ------------------------
 --[[Clusterio events]]--
 ------------------------
@@ -229,12 +236,20 @@ end
 --[[Thing resetting events]]--
 ------------------------------
 script.on_init(function()
+	-- 2.0 compatibility
+	if lib_compat.version_ge("2.0.0") then
+		global = storage
+	end
 	clusterio_api.init()
 	RegisterClusterioEvents()
 	Reset()
 end)
 
 script.on_load(function()
+	-- 2.0 compatibility
+	if lib_compat.version_ge("2.0.0") then
+		global = storage
+	end
 	clusterio_api.init()
 	RegisterClusterioEvents()
 end)
@@ -284,15 +299,17 @@ function Reset()
 	if not global.useableItemStorage then
 		global.useableItemStorage = {}
 	end
-	for name, entry in pairs(global.useableItemStorage) do
-		if not entry.remainingItems then
-			global.useableItemStorage[name] = nil
-		else
-			if not entry.initialItemCount then
-				entry.initialItemCount = entry.remainingItems
-			end
-			if not entry.lastPull then
-				entry.lastPull = game.tick
+	for name, qualities in pairs(global.useableItemStorage) do
+		for quality, entry in pairs(qualities) do
+			if not entry.remainingItems then
+				global.useableItemStorage[name][quality] = nil
+			else
+				if not entry.initialItemCount then
+					entry.initialItemCount = entry.remainingItems
+				end
+				if not entry.lastPull then
+					entry.lastPull = game.tick
+				end
 			end
 		end
 	end
@@ -422,19 +439,23 @@ end)
 script.on_nth_tick(60*60, function(event)
 	if not settings.global["subspace_storage-infinity-mode"].value then
 		local staleTick = game.tick - 60 * 60
-		for itemName, entry in pairs(global.useableItemStorage) do
-			if entry.lastPull < staleTick and entry.remainingItems > 0 then
-				AddItemToInputList(itemName, entry.remainingItems)
-				entry.remainingItems = 0
+		for itemName, qualities in pairs(global.useableItemStorage) do
+			for quality, entry in pairs(qualities) do
+				if entry.lastPull < staleTick and entry.remainingItems > 0 then
+					AddItemToInputList(itemName, entry.remainingItems, quality)
+					entry.remainingItems = 0
+				end
 			end
 		end
 	end
 end)
 
 function UpdateUseableStorage()
-	for k, v in pairs(global.itemStorage) do
-		GiveItemsToUseableStorage(k, v)
-		global.useableItemStorage[k].initialItemCount = global.useableItemStorage[k].remainingItems
+	for itemName, qualities in pairs(global.itemStorage) do
+		for quality, count in pairs(qualities) do
+			GiveItemsToUseableStorage(itemName, count, quality)
+			global.useableItemStorage[itemName][quality].initialItemCount = global.useableItemStorage[itemName][quality].remainingItems
+		end
 	end
 	global.itemStorage = {}
 end
@@ -549,10 +570,10 @@ function HandleInputChest(entityData)
 	if entity.valid then
 		--get the content of the chest
 		local items = inventory.get_contents()
-		for itemName, itemCount in pairs(items) do
-			if isItemLegal(itemName) then
-				AddItemToInputList(itemName, itemCount)
-				inventory.remove({name = itemName, count = itemCount})
+		for _, item in pairs(items) do
+			if isItemLegal(item.name) then
+				local removed = inventory.remove({name = item.name, count = item.count, quality = item.quality})
+				AddItemToInputList(item.name, removed, item.quality)
 			end
 		end
 	end
@@ -568,11 +589,21 @@ function HandleInputTank(entityData)
 			if isFluidLegal(fluid.name) then
 				if fluid.amount > 1 then
 					local fluid_taken = math.ceil(fluid.amount) - 1
-					AddItemToInputList(fluid.name, fluid_taken)
+					AddItemToInputList(fluid.name, fluid_taken, "normal")
 					fluid.amount = fluid.amount - fluid_taken
 					fluidbox[1] = fluid
 				else
-					if entity.get_merged_signal({name="signal-P",type="virtual"}) == 1 then
+					local signal
+					if lib_compat.version_ge("2.0.0") then
+						signal = entity.get_signal(
+							{name = "signal-P", type = "virtual"},
+							defines.wire_connector_id.circuit_red,
+							defines.wire_connector_id.circuit_green
+						)
+					else
+						signal = entity.get_merged_signal({name="signal-P",type="virtual"})
+					end
+					if signal == 1 then
 						fluidbox[1] = nil
 					end
 				end
@@ -598,7 +629,7 @@ function HandleInputElectricity(entityData)
 		local energy = entity.energy
 		local availableEnergy = math.floor(energy / ELECTRICITY_RATIO)
 		if availableEnergy > 0 then
-			AddItemToInputList(ELECTRICITY_ITEM_NAME, availableEnergy)
+			AddItemToInputList(ELECTRICITY_ITEM_NAME, availableEnergy, "normal")
 			entity.energy = energy - (availableEnergy * ELECTRICITY_RATIO)
 		end
 	end
@@ -611,23 +642,37 @@ function GetOutputChestRequest(requests, entityData)
 	--as that just leads to unnecessary bot work
 	if entity.valid and not entity.to_be_deconstructed(entity.force) then
 		local slotsLeft = 60
+		local filters = lib_compat.version_ge("2.0.0") and entity.get_logistic_point()[1].filters or {}
+
 		--Go though each request slot
-		for i = 1, entity.request_slot_count do
-			local requestItem = entity.get_request_slot(i)
+		local loopCount = lib_compat.version_ge("2.0.0") and #filters or entity.request_slot_count
+		for i = 1, loopCount do
+			local requestItem = lib_compat.version_ge("2.0.0") and filters[i] or entity.get_request_slot(i)
 
 			--Some request slots may be empty and some items are not allowed
 			--to be imported
-			if requestItem ~= nil and isItemLegal(requestItem.name) then
-				local itemsInChest = chestInventory.get_item_count(requestItem.name)
+			if isItemLegal(requestItem.name) then
+				local itemsInChest
+				if lib_compat.version_ge("2.0.0") then
+					itemsInChest = chestInventory.get_item_count({name = requestItem.name, quality = requestItem.quality})
+				else
+					itemsInChest = chestInventory.get_item_count(requestItem.name)
+				end
 
 				--If there isn't enough items in the chest
 				local missingAmount = requestItem.count - itemsInChest
 				--But don't request more than the chest can hold
-				local stackSize = game.item_prototypes[requestItem.name].stack_size
+				--this will still request too much if you have a lot of different requests for 20k
+				local stackSize
+				if lib_compat.version_ge("2.0.0") then
+					stackSize = prototypes.item[requestItem.name].stack_size
+				else
+					stackSize = game.item_prototypes[requestItem.name].stack_size
+				end
 				missingAmount = math.min(missingAmount, slotsLeft * stackSize)
 				if missingAmount > 0 then
 					slotsLeft = slotsLeft - math.ceil(missingAmount / stackSize)
-					local entry = AddRequestToTable(requests, requestItem.name, missingAmount, entity)
+					local entry = AddRequestToTable(requests, requestItem.name, missingAmount, entity, requestItem.quality)
 					entry.inv = chestInventory
 				end
 			end
@@ -660,7 +705,7 @@ function GetOutputTankRequest(requests, entityData)
 				fluid = {name = fluidName, amount = 0}
 			end
 
-			local missingFluid = math.max(math.ceil(MAX_FLUID_AMOUNT - fluid.amount), 0)
+			local missingFluid = math.max(math.ceil(fluidbox.get_capacity(1) - fluid.amount), 0)
 			--If the entity is missing fluid than add a request for fluid
 			if missingFluid > 0 then
 				local entry = AddRequestToTable(requests, fluidName, missingFluid, entity)
@@ -688,7 +733,8 @@ function OutputChestInputMethod(request, itemName, evenShareOfItems)
 		local itemsToInsert =
 		{
 			name = itemName,
-			count = evenShareOfItems
+			count = evenShareOfItems,
+			quality = request.quality,
 		}
 
 		return request.inv.insert(itemsToInsert)
@@ -724,43 +770,51 @@ function OutputElectricityinputMethod(request, _, evenShare)
 end
 
 
-function PrepareRequests(array, shouldSort)
+function PrepareRequests(itemIdentifierToRequestinfoMap, shouldSort)
 	local requests = { pos = 0 }
-	for itemName, requestInfo in pairs(array) do
-		if shouldSort then
-			--To be able to distribute it fairly, the requesters need to be sorted in order of how
-			--much they are missing, so the requester with the least missing of the item will be first.
-			--If this isn't done then there could be items leftover after they have been distributed
-			--even though they could all have been distributed if they had been distributed in order.
-			table.sort(requestInfo.requesters, function(left, right)
-				return left.missingAmount < right.missingAmount
-			end)
-		end
+	for itemName, qualities in pairs(itemIdentifierToRequestinfoMap) do
+		for _quality, requestInfo in pairs(qualities) do
+			if shouldSort then
+				--To be able to distribute it fairly, the requesters need to be sorted in order of how
+				--much they are missing, so the requester with the least missing of the item will be first.
+				--If this isn't done then there could be items leftover after they have been distributed
+				--even though they could all have been distributed if they had been distributed in order.
+				table.sort(requestInfo.requesters, function(left, right)
+					return left.missingAmount < right.missingAmount
+				end)
+			end
 
-		for i = 1, #requestInfo.requesters do
-			local request = requestInfo.requesters[i]
-			request.itemName = itemName
-			request.requestedAmount = requestInfo.requestedAmount
-			table.insert(requests, request)
+			for i = 1, #requestInfo.requesters do
+				local request = requestInfo.requesters[i]
+				request.itemName = itemName
+				request.requestedAmount = requestInfo.requestedAmount
+				request.quality = requestInfo.quality
+				table.insert(requests, request)
+			end
 		end
 	end
 
 	return requests
 end
 
-function AddRequestToTable(requests, itemName, missingAmount, storage)
+function AddRequestToTable(requests, itemName, missingAmount, storage, quality)
+	if quality == nil then
+		quality = "normal"
+	end
 	--If this is the first entry for this item type then
 	--create a table for this item type first
-	if requests[itemName] == nil then
-		requests[itemName] =
+	if requests[itemName] == nil or requests[itemName][quality] == nil then
+		requests[itemName] = requests[itemName] or {}
+		requests[itemName][quality] =
 		{
 			requestedAmount = 0,
 			requesters = {}
 		}
 	end
 
-	local itemEntry = requests[itemName]
+	local itemEntry = requests[itemName][quality]
 
+	itemEntry.quality = quality
 	--Add missing item to the count and add this chest inv to the list
 	itemEntry.requestedAmount = itemEntry.requestedAmount + missingAmount
 	itemEntry.requesters[#itemEntry.requesters + 1] =
@@ -774,13 +828,13 @@ end
 
 function EvenlyDistributeItems(request, functionToInsertItems)
 	--Take the required item count from storage or how much storage has
-	local itemCount = RequestItemsFromUseableStorage(request.itemName, request.requestedAmount)
+	local itemCount = RequestItemsFromUseableStorage(request.itemName, request.requestedAmount, request.quality)
 
 	--need to scale all the requests according to how much of the requested items are available.
 	--Can't be more than 100% because otherwise the chests will overfill
-	local avaiableItemsRatio = math.min(GetInitialItemCount(request.itemName) / request.requestedAmount, 1)
+	local avaiableItemsRatio = math.min(GetInitialItemCount(request.itemName, request.quality) / request.requestedAmount, 1)
 	--Floor is used here so no chest uses more than its fair share.
-	--If they used more then the last entity would bet less which would be
+	--If they used more then the last entity would get less which would be
 	--an issue with +1000 entities requesting items.
 	local chestHold = math.floor(request.missingAmount * avaiableItemsRatio)
 	--If there is less items than requests then floor will return zero and thus not
@@ -794,7 +848,7 @@ function EvenlyDistributeItems(request, functionToInsertItems)
 	--then ask for more items from outside the game
 	local missingItems = request.missingAmount - chestHold
 	if missingItems > 0 then
-		AddItemToOutputList(request.itemName, missingItems)
+		AddItemToOutputList(request.itemName, missingItems, request.quality)
 	end
 
 	if itemCount > 0 then
@@ -808,7 +862,7 @@ function EvenlyDistributeItems(request, functionToInsertItems)
 		--all the items.
 		--In those cases the items should be put back into storage.
 		if itemCount > 0 then
-			GiveItemsToUseableStorage(request.itemName, itemCount)
+			GiveItemsToUseableStorage(request.itemName, itemCount, request.quality)
 		end
 	end
 
@@ -820,8 +874,10 @@ end
 ----------------------------------------
 function ExportInputList()
 	local items = {}
-	for name, count in pairs(global.inputList) do
-		table.insert(items, {name, count})
+	for name, qualities in pairs(global.inputList) do
+		for quality, count in pairs(qualities) do
+			table.insert(items, {name, count, quality})
+		end
 	end
 	global.inputList = {}
 	if #items > 0 then
@@ -831,8 +887,10 @@ end
 
 function ExportOutputList()
 	local items = {}
-	for name, count in pairs(global.outputList) do
-		table.insert(items, {name, count})
+	for name, qualities in pairs(global.outputList) do
+		for quality, count in pairs(qualities) do
+			table.insert(items, {name, count, quality})
+		end
 	end
 	global.outputList = {}
 	if #items > 0 then
@@ -841,9 +899,10 @@ function ExportOutputList()
 end
 
 function Import(data)
-	local items = game.json_to_table(data)
+	local items = lib_compat.json_to_table(data)
+	log("[Import] Received items: " .. serpent.line(items))
 	for _, item in ipairs(items) do
-		GiveItemsToStorage(item[1], item[2])
+		GiveItemsToStorage(item[1], item[2], item[3])
 	end
 end
 
@@ -851,9 +910,9 @@ function UpdateInvData(data, full)
 	if full then
 		global.invdata = {}
 	end
-	local items = game.json_to_table(data)
+	local items = lib_compat.json_to_table(data)
 	for _, item in ipairs(items) do
-		global.invdata[item[1]] = item[2]
+		global.invdata[item[1]..":"..item[3]] = item
 	end
 	UpdateInvCombinators()
 end
@@ -911,30 +970,57 @@ function UpdateInvCombinators()
 		table.insert(invframe,{count=instance_id,index=#invframe+1,signal={name="signal-localid",type="virtual"}})
 	end
 
-	local items = game.item_prototypes
-	local fluids = game.fluid_prototypes
-	local virtuals = game.virtual_signal_prototypes
 	if global.invdata then
-		for name, count in pairs(global.invdata) do
+		for _identifier, data in pairs(global.invdata) do
+			-- If data is a number, then its still in the pre 2.0 format - force delete to migrate to new format
+			if type(data) == "number" then
+				global.invdata = {}
+				return
+			end
 			-- Combinator signals are limited to a max value of 2^31-1
-			count = math.min(count, 0x7fffffff)
-			if items[name] then
-				invframe[#invframe+1] = {count=count,index=#invframe+1,signal={name=name,type="item"}}
-			elseif fluids[name] then
-				invframe[#invframe+1] = {count=count,index=#invframe+1,signal={name=name,type="fluid"}}
-			elseif virtuals[name] then
-				invframe[#invframe+1] = {count=count,index=#invframe+1,signal={name=name,type="virtual"}}
+			local name = data[1]
+			local count = math.min(data[2], 0x7fffffff)
+			local quality = data[3]
+			-- Split code for 1.1 and 2.0
+			if lib_compat.version_ge("2.0.0") then
+				if lib_compat.prototypes.item[name] then
+					invframe[#invframe+1] = {min=count, value={type="item", name=name, quality=quality}}
+				elseif lib_compat.prototypes.fluid[name] then
+					invframe[#invframe+1] = {min=count, value={type="fluid", name=name, quality=quality}}
+				elseif lib_compat.prototypes.virtual_signal[name] then
+					invframe[#invframe+1] = {min=count, value={type="virtual", name=name, quality=quality}}
+				end
+			else
+				-- Combinator signals are limited to a max value of 2^31-1
+				if lib_compat.prototypes.item[name] then
+					invframe[#invframe+1] = {count=count, index=#invframe+1, signal={name=name, type="item"}}
+				elseif lib_compat.prototypes.fluid[name] then
+					invframe[#invframe+1] = {count=count, index=#invframe+1, signal={name=name, type="fluid"}}
+				elseif lib_compat.prototypes.virtual_signal[name] then
+					invframe[#invframe+1] = {count=count, index=#invframe+1, signal={name=name, type="virtual"}}
+				end
 			end
 		end
 	end
 
 	for i,invControl in pairs(global.invControls) do
-		if invControl.valid then
-			compat.set_parameters(invControl, invframe)
-			invControl.enabled=true
+		if lib_compat.version_ge("2.0.0") then
+			if invControl.valid then
+				local section = invControl.get_section(1)
+				if section == nil then
+					section = invControl.add_section()
+				end
+				section.filters = invframe
+				section.active = true
+				invControl.enabled = true
+			end
+		else
+			if invControl.valid then
+				compat.set_parameters(invControl, invframe)
+				invControl.enabled=true
+			end
 		end
 	end
-
 end
 
 
@@ -957,7 +1043,7 @@ remote.add_interface("clusterio",
 --------------------
 --[[Misc methods]]--
 --------------------
-function RequestItemsFromUseableStorage(itemName, itemCount)
+function RequestItemsFromUseableStorage(itemName, itemCount, quality)
 	--if infinite resources then the whole request is approved
 	if settings.global["subspace_storage-infinity-mode"].value then
 		return itemCount
@@ -965,20 +1051,20 @@ function RequestItemsFromUseableStorage(itemName, itemCount)
 
 	--if result is nil then there is no items in storage
 	--which means that no items can be given
-	if global.useableItemStorage[itemName] == nil then
+	if global.useableItemStorage[itemName] == nil or global.useableItemStorage[itemName][quality] == nil then
 		return 0
 	end
 	--if the number of items in storage is lower than the number of items
 	--requested then take the number of items there are left otherwise take the requested amount
-	local itemsTakenFromStorage = math.min(global.useableItemStorage[itemName].remainingItems, itemCount)
-	global.useableItemStorage[itemName].remainingItems = global.useableItemStorage[itemName].remainingItems - itemsTakenFromStorage
-	global.useableItemStorage[itemName].lastPull = game.tick
+	local itemsTakenFromStorage = math.min(global.useableItemStorage[itemName][quality].remainingItems, itemCount)
+	global.useableItemStorage[itemName][quality].remainingItems = global.useableItemStorage[itemName][quality].remainingItems - itemsTakenFromStorage
+	global.useableItemStorage[itemName][quality].lastPull = game.tick
 
 	return itemsTakenFromStorage
 end
 
-function GetInitialItemCount(itemName)
-	--this method is used so the mod knows hopw to distribute
+function GetInitialItemCount(itemName, quality)
+	--this method is used so the mod knows how to distribute
 	--the items between all entities. If infinite resources is enabled
 	--then all entities should get their requests fulfilled-
 	--To simulate that this method returns 1mil which should be enough
@@ -987,41 +1073,43 @@ function GetInitialItemCount(itemName)
 		return 1000000 --1.000.000
 	end
 
-	if global.useableItemStorage[itemName] == nil then
+	if global.useableItemStorage[itemName] == nil or global.useableItemStorage[itemName][quality] == nil then
 		return 0
 	end
-	return global.useableItemStorage[itemName].initialItemCount
+	return global.useableItemStorage[itemName][quality].initialItemCount
 end
 
-function GiveItemsToUseableStorage(itemName, itemCount)
-	if global.useableItemStorage[itemName] == nil then
-		global.useableItemStorage[itemName] =
-		{
+function GiveItemsToUseableStorage(itemName, itemCount, quality)
+	if global.useableItemStorage[itemName] == nil or global.useableItemStorage[itemName][quality] == nil then
+		global.useableItemStorage[itemName] = global.useableItemStorage[itemName] or {}
+		global.useableItemStorage[itemName][quality] = {
 			initialItemCount = 0,
 			remainingItems = 0,
 			lastPull = game.tick,
 		}
 	end
-	global.useableItemStorage[itemName].remainingItems = global.useableItemStorage[itemName].remainingItems + itemCount
+	global.useableItemStorage[itemName][quality].remainingItems = global.useableItemStorage[itemName][quality].remainingItems + itemCount
 end
 
-function GiveItemsToStorage(itemName, itemCount)
+function GiveItemsToStorage(itemName, itemCount, quality)
 	--if this is called for the first time for an item then the result
 	--is nil. if that's the case then set the result to 0 so it can
 	--be used in arithmetic operations
-	global.itemStorage[itemName] = global.itemStorage[itemName] or 0
-	global.itemStorage[itemName] = global.itemStorage[itemName] + itemCount
+	global.itemStorage[itemName] = global.itemStorage[itemName] or {}
+	global.itemStorage[itemName][quality] = (global.itemStorage[itemName][quality] or 0) + itemCount
 end
 
-function AddItemToInputList(itemName, itemCount)
+function AddItemToInputList(itemName, itemCount, quality)
 	if settings.global["subspace_storage-infinity-mode"].value then
 		return
 	end
-	global.inputList[itemName] = (global.inputList[itemName] or 0) + itemCount
+	global.inputList[itemName] = global.inputList[itemName] or {}
+	global.inputList[itemName][quality] = (global.inputList[itemName][quality] or 0) + itemCount
 end
 
-function AddItemToOutputList(itemName, itemCount)
-	global.outputList[itemName] = (global.outputList[itemName] or 0) + itemCount
+function AddItemToOutputList(itemName, itemCount, quality)
+	global.outputList[itemName] = global.outputList[itemName] or {}
+	global.outputList[itemName][quality] = (global.outputList[itemName][quality] or 0) + itemCount
 end
 
 function isFluidLegal(name)
@@ -1227,7 +1315,11 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
 		end
 	else
 		if global.zoneDraw[event.player_index] then
-			rendering.destroy(global.zoneDraw[event.player_index])
+			if lib_compat.version_ge("2.0.0") then
+				global.zoneDraw[event.player_index].destroy()
+			else
+				rendering.destroy(global.zoneDraw[event.player_index])
+			end
 			global.zoneDraw[event.player_index] = nil
 		end
 	end
