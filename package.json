@@ -2,6 +2,9 @@
   "name": "subspace_storage",
   "repository": "https://github.com/clusterio/subspace_storage",
   "license": "MIT",
+  "scripts": {
+    "build": "node build.js"
+  },
   "engines": {
     "node": ">=10"
   },

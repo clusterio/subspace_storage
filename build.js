@@ -24,14 +24,11 @@ async function main() {
 	const args = yargs
 		.scriptName("build")
 		.options({
-			'render': { describe: "Render assets", type: 'boolean', default: false },
-			'post': { describe: "Post process assets", type: 'boolean', default: false },
 			'clean': { describe: "Remove previous builds", type: 'boolean', default: false },
 			'build': { describe: "Build mod(s)", type: 'boolean', default: true },
 			'pack': { describe: "Pack into zip file", type: 'boolean', default: true },
 			'source-dir': { describe: "Path to mod source directory", nargs: 1, type: 'string', default: "src" },
 			'output-dir': { describe: "Path to output built mod(s)", nargs: 1, type: 'string', default: "dist" },
-			'blender-path': { describe: "Path to blender", type: 'string', default: 'blender' },
 		})
 		.argv;
 
@@ -41,25 +38,6 @@ async function main() {
 		if (line.slice(3, 6).startsWith("src")) {
 			console.warn(`Warning: ${line.slice(3)} is unclean`);
 		}
-	}
-
-	if (args.render) {
-		await exec(
-			args.blenderPath,
-			[
-				"--background",
-				"--python-exit-code", "1",
-				path.join("assets", "model.blend"),
-				"--python", path.join("assets", "render.py")
-			]
-		);
-	}
-
-	if (args.post) {
-		await exec(
-			process.platform === 'win32' ? "py" : "python",
-			["post.py"],
-		);
 	}
 
 	// Custom for subspace_storage with Hurricane graphics - do some post processing
@@ -271,7 +249,5 @@ async function buildMod(args, info) {
 }
 
 if (module === require.main) {
-	(async () => {
-		await main().catch(err => { console.log(err) });
-	})();
+	main().catch(err => { console.log(err) });
 }
