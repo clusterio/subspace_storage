@@ -570,10 +570,19 @@ function HandleInputChest(entityData)
 	if entity.valid then
 		--get the content of the chest
 		local items = inventory.get_contents()
-		for _, item in pairs(items) do
-			if isItemLegal(item.name) then
-				local removed = inventory.remove({name = item.name, count = item.count, quality = item.quality})
-				AddItemToInputList(item.name, removed, item.quality)
+		if lib_compat.version_ge("2.0.0") then
+			for _, item in pairs(items) do
+				if isItemLegal(item.name) then
+					local removed = inventory.remove({name = item.name, count = item.count, quality = item.quality})
+					AddItemToInputList(item.name, removed, item.quality)
+				end
+			end
+		else
+			for itemName, count in pairs(items) do
+				if isItemLegal(itemName) then
+					local removed = inventory.remove({name = itemName, count = count})
+					AddItemToInputList(itemName, removed, "normal")
+				end
 			end
 		end
 	end
