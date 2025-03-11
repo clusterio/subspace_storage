@@ -1,0 +1,65 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+      - run: pnpm i --no-frozen-lockfile
+      - run: node build.js
+      # Upload build to artifacts
+      - name: Upload build to artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: subspace_storage-builds
+          path: ./dist
+          if-no-files-found: error
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        factorio-version: ['0.17.79', '1.0.0', '1.1.110', '2.0.39']
+      fail-fast: false
+    
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          
+      # Install xz-utils for tar.xz extraction
+      - name: Install xz-utils
+        run: sudo apt-get update && sudo apt-get install -y xz-utils
+          
+      # Download the built artifacts
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: subspace_storage-builds
+          path: ./dist
+          
+      - name: Install dependencies
+        run: pnpm i --no-frozen-lockfile
+        
+      - name: Run integration test
+        env:
+          FACTORIO_VERSION: ${{ matrix.factorio-version }}
+        run: node test/integration.test.js

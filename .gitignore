@@ -49,3 +49,6 @@ package-lock.json
 
 # Blender save versions
 *.blend[1-9]
+
+# Factorio test files
+test/factorio*
