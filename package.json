@@ -14,10 +14,10 @@
     "jszip": "^3.10.1",
     "klaw": "^4.1.0",
     "sharp": "^0.33.5",
+    "unzipper": "^0.10.14",
     "yargs": "^17.7.2"
   },
   "devDependencies": {
-    "node-factorio-api": "^0.3.8",
     "tar": "^6.2.0"
   }
 }
