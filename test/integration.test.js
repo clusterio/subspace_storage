@@ -11,10 +11,29 @@ const { pipeline } = require('stream/promises');
 const { Extract } = require('unzipper');
 
 // Factorio version to test with
-const factorioVersion = process.env.FACTORIO_VERSION || '2.0.39';
+const factorioVersion = process.env.FACTORIO_VERSION || '1.1.110';
 const modVersion = process.env.MOD_VERSION;
 // GitHub token for API access (can be passed as environment variable)
 const githubToken = process.env.GITHUB_TOKEN;
+
+const checkModVersionAgainstFactorioVersion = (modVersion, factorioVersion) => {
+    const modVersionParts = modVersion.split('.');
+    const factorioVersionParts = factorioVersion.split('.');
+
+    switch (modVersionParts[2]) {
+        case '20':
+            return factorioVersionParts[0] === '2';
+        case '11':
+            return factorioVersionParts[0] === '1' && factorioVersionParts[1] === '1';
+        case '10':
+            return factorioVersionParts[0] === '1' && factorioVersionParts[1] === '0';
+        case '17':
+            return factorioVersionParts[0] === '0' && factorioVersionParts[1] === '17';
+        default:
+            return false;
+    }
+};
+
 
 const downloadFactorio = async () => {
     const baseDir = path.join(__dirname, `factorio_${factorioVersion}`);
@@ -283,13 +302,19 @@ const downloadClusterioLib = async (modDir) => {
         // Step 5: Extract all files starting with clusterio_lib_ (older versions just won't be loaded by factorio)
         const files = await fs.readdir(extractDir);
         const modFiles = files.filter(file => file.startsWith('clusterio_lib_') && file.endsWith('.zip'));
+        const validModFiles = modFiles.filter(file => checkModVersionAgainstFactorioVersion(
+            file
+                .replace('clusterio_lib_', '')
+                .replace('.zip', ''),
+            factorioVersion
+        ));
         
-        if (modFiles.length === 0) {
+        if (validModFiles.length === 0) {
             throw new Error('Could not find clusterio_lib mod file in downloaded artifact');
         }
         
         // Copy the mod file to the mods directory
-        for (const modFile of modFiles) {
+        for (const modFile of validModFiles) {
             await fs.copy(
                 path.join(extractDir, modFile), 
                 path.join(modDir, modFile)
@@ -300,7 +325,7 @@ const downloadClusterioLib = async (modDir) => {
         await fs.remove(artifactZipPath);
         await fs.remove(extractDir);
         
-        console.log(`Successfully installed clusterio_lib mod:`, modFiles);
+        console.log(`Successfully installed clusterio_lib mod:`, validModFiles);
     } catch (error) {
         throw new Error(`Failed to download clusterio_lib: ${error.message}`);
     }
