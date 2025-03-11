@@ -377,6 +377,12 @@ const runFactorio = async (factorioDir) => {
                 }
             }
             
+            // Check that the mod was loaded correctly
+            if (!output.includes('Loading mod subspace_storage')) {
+                reject(new Error('Could not find "Loading mod subspace_storage" in the output. The mod may not have been loaded correctly.'));
+                return;
+            }
+            
             resolve();
         });
     });
