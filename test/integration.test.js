@@ -335,6 +335,9 @@ const runFactorio = async (factorioDir) => {
     // Get the actual executable path - factorioDir is already the 'factorio' subdirectory
     const factorioBin = path.join(factorioDir, 'bin', 'x64', 'factorio');
     console.log(`Factorio executable path: ${factorioBin}`);
+
+    // Mods:
+    console.log("Mods:", await fs.readdir(path.join(factorioDir, 'mods')));
     
     return new Promise((resolve, reject) => {
         const factorio = spawn(factorioBin, [
