@@ -43,7 +43,7 @@ In the GitHub Actions workflow, we run a test matrix with the following Factorio
 
 - 0.17.79
 - 1.0.0
-- 1.1.100
+- 1.1.110
 - 2.0.39
 
 These match the respective Factorio versions that the mod supports (0.17, 1.0, 1.1, 2.0).
