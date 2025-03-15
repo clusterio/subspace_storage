@@ -1,16 +1,22 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.2.20
+Date: 15. 03. 2025
+  Bugfixes:
+    - Fixed crash on constant combinator update pre 2.0 - https://github.com/clusterio/subspace_storage/pull/76
+    - Add automated mod testing
+---------------------------------------------------------------------------------------------------
+Version: 2.1.20
+Date: 06. 03. 2025
+  Bugfixes:
+    - Fixed crash on item export pre 2.0
+---------------------------------------------------------------------------------------------------
 Version: 2.0.20
 Date: 25. 02. 2025
   Features:
     - Updated to factorio 2.0
     - Added space age support
-    - New graphics by @hurricane
----------------------------------------------------------------------------------------------------
-Version: 2.0.20
-Date: 08. 12. 2024
-  Features:
-    - Ported to Factorio 2.0
     - Quality support
+    - New graphics by @hurricane
 ---------------------------------------------------------------------------------------------------
 Version: 1.99.18
 Date: 09. 02. 2023
