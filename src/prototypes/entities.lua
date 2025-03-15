@@ -1,4 +1,4 @@
-local compat = require("compat")
+local compat = require("lib_compat")
 local icons = require("entity_icons")
 local pictures = require("entity_pictures")
 
