@@ -1,49 +1,62 @@
-# Integration Tests for Subspace Storage
+# Subspace Storage Integration Tests
 
-This directory contains integration tests for the Subspace Storage mod.
+This directory contains integration tests for the Subspace Storage mod. These tests verify that the mod loads correctly and that its Lua commands interact with the game as expected.
 
-## How it works
+## Test Files
 
-The integration tests:
+- `integration.test.js`: Basic test that verifies the mod loads correctly
+- `lua_commands_test.js`: Tests that verify the Lua commands interact with the game correctly
 
-1. Download a headless version of Factorio based on the version specified
-2. Find the appropriate mod zip file in the `dist/` directory for the Factorio version
-3. Create a dummy `clusterio_lib` mod to satisfy dependencies
-4. Start Factorio with the mod and check if it loads without crashing
+## Running the Tests
 
-## Running tests locally
+### Environment Variables
 
-First, build the mod:
+The tests use the following environment variables:
 
-```bash
-npm run build
-```
+- `FACTORIO_VERSION`: The version of Factorio to test with (optional, defaults to 1.1.110)
+- `MOD_VERSION`: The version of the mod to test with (optional)
+- `GITHUB_TOKEN`: The GitHub token to use for downloading clusterio_lib from GitHub Actions (required for CI)
 
-Then run the integration tests:
+### Running the Basic Integration Test
 
 ```bash
-npm test
+node integration.test.js
 ```
 
-You can specify a specific Factorio version to test with:
+This test verifies that the mod loads correctly without any errors.
+
+### Running the Lua Commands Test
 
 ```bash
-FACTORIO_VERSION=2.0.39 npm test
+node lua_commands_test.js
 ```
 
-You can also specify a specific mod version to test with:
+This test verifies that the Lua commands interact with the game correctly.
 
-```bash
-MOD_VERSION=2.1.20 npm test
-```
+## How the Tests Work
 
-## Test Matrix in CI
+The tests work by:
 
-In the GitHub Actions workflow, we run a test matrix with the following Factorio versions:
+1. Downloading a headless version of Factorio
+2. Setting up a mod directory with the Subspace Storage mod and its dependencies
+3. Creating a test save file
+4. Running Factorio with Lua scripts that test specific functionality
+5. Analyzing the output to determine if the tests passed or failed
 
-- 0.17.79
-- 1.0.0
-- 1.1.110
-- 2.0.39
+## Adding New Tests
 
-These match the respective Factorio versions that the mod supports (0.17, 1.0, 1.1, 2.0).
+To add a new test:
+
+1. Create a new Lua script in the `createTestScripts` function in `lua_commands_test.js`
+2. The script should use `game.print("SUCCESS: ...")` to indicate success and `game.print("ERROR: ...")` to indicate failure
+3. The test runner will count the number of successes and errors to determine if the test passed
+
+## Troubleshooting
+
+If the tests fail, check the output for error messages. Common issues include:
+
+- Missing dependencies
+- Incompatible Factorio version
+- Errors in the Lua scripts
+
+If you're having trouble with the tests, try running Factorio manually with the mod installed to see if there are any issues.
