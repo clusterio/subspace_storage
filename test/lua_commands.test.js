@@ -38,19 +38,18 @@ const createTestScripts = async (tempDir) => {
 			else
 				global._test_combinator = combinator
 			end`,
-			`-- Set a simulated inventory
+			`--[[ Set a simulated inventory ]]
 			local itemsJson = '[["iron-plate",100,"normal"],["copper-plate",50,"normal"]]'
 			UpdateInvData(itemsJson, true)
 			`,
-			`-- Verify the combinator state
+			`--[[ Verify the combinator state ]]
 			local combinator = global._test_combinator
 			local control = combinator.get_control_behavior()
 
 			local success = true
 			local function verify_signal(index, item_name, expected_count)
 				if ${FACTORIO_VERSION.split(".")[0]} < 2 then
-					local params = control.parameters
-					local param = params[index]
+					local param = control.get_signal(index)
 					if not param or param.signal.name ~= item_name or param.count ~= expected_count then
 						rcon.print(string.format(
 							"ERROR: Signal mismatch at index %d - Expected %s: %d, Got: %s: %d",
@@ -205,7 +204,7 @@ const runTestsWithRcon = async (server, tests) => {
 			// Run each script in sequence with delay
 			for (const script of testScripts) {
 				// Send the Lua command via RCON
-				const response = await rcon.send(`/c __subspace_storage__ ${script}`);
+				const response = await rcon.send(`/c __subspace_storage__ ${script.replace(/\n/g, ' ')}`);
 				combinedResponse += response + '\n';
 
 				// Check for execution errors after each script
