@@ -69,4 +69,4 @@ jobs:
         env:
           FACTORIO_VERSION: ${{ matrix.factorio-version }}
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-        run: node test/integration.test.js
+        run: npm test

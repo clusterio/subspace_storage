@@ -5,7 +5,7 @@ local mod_gui = require("mod-gui")
 local clusterio_api = require("__clusterio_lib__/api")
 local lib_compat = require("__clusterio_lib__/compat")
 
-local compat = require("compat")
+local compat = require("lib_compat")
 
 
 -- Entities which are not allowed to be placed outside the restriction zone
@@ -204,6 +204,9 @@ script.on_event(defines.events.on_robot_built_entity, function(event)
 	OnBuiltEntity(event)
 end)
 
+script.on_event(defines.events.script_raised_built, function(event)
+	OnBuiltEntity(event)
+end)
 
 ----------------------------
 --[[Thing killing events]]--

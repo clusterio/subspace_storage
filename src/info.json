@@ -4,22 +4,22 @@
         {
             "version": "2.1.17",
             "factorio_version": "0.17",
-            "additional_files": { "compat.lua": ["compat", "factorio_0.17.lua"] }
+            "additional_files": { "lib_compat.lua": ["compat", "factorio_0.17.lua"] }
         },
         {
             "version": "2.1.10",
             "factorio_version": "1.0",
-            "additional_files": { "compat.lua": ["compat", "factorio_1.0.lua"] }
+            "additional_files": { "lib_compat.lua": ["compat", "factorio_1.0.lua"] }
         },
         {
             "version": "2.1.11",
             "factorio_version": "1.1",
-            "additional_files": { "compat.lua": ["compat", "factorio_1.1.lua"] }
+            "additional_files": { "lib_compat.lua": ["compat", "factorio_1.1.lua"] }
         },
         {
             "version": "2.1.20",
             "factorio_version": "2.0",
-            "additional_files": { "compat.lua": ["compat", "factorio_2.0.lua"] }
+            "additional_files": { "lib_compat.lua": ["compat", "factorio_2.0.lua"] }
         }
     ],
     "title": "Subspace Storage (Alpha)",
