@@ -85,23 +85,12 @@ local function subspace_interactor_entity(options)
 		impact_category = steel_chest.impact_category, -- 2.0+
 	}
 
-	if options.circuit_connector then
-		local entity_type = options.entity_properties.type
-		if compat.version_ge(2, 1) and (entity_type == "container" or entity_type == "logistic-container") then
-			-- 2.1 containers take one circuit connector per direction
-			entity.circuit_connector = { options.circuit_connector }
-		elseif compat.version_ge(2, 0) then
-			entity.circuit_connector = options.circuit_connector
-		else
-			entity.circuit_wire_connection_points = options.circuit_connector.points
-			entity.circuit_wire_connection_point = options.circuit_connector.points
-			entity.circuit_connector_sprites = options.circuit_connector.sprites
-			entity.circuit_wire_max_distance = 9
-		end
-	end
-
 	for key, value in pairs(options.entity_properties) do
 		entity[key] = value
+	end
+
+	if options.circuit_connector then
+		compat.set_circuit_connector(entity, options.circuit_connector)
 	end
 
 	data:extend {
