@@ -4,7 +4,7 @@ const path = require('path');
 const { createWriteStream } = require('fs');
 const https = require('https');
 const { pipeline } = require('stream/promises');
-const { Extract } = require('unzipper');
+const { Extract, Open } = require('unzipper');
 
 // Factorio version to test with
 const factorioVersion = process.env.FACTORIO_VERSION || '1.1.110';
@@ -203,12 +203,12 @@ exports.setupModDirectory = setupModDirectory;const downloadClusterioLib = async
 		const files = await fs.readdir(extractDir);
 		const modFiles = files.filter(file => file.startsWith('clusterio_lib_') && file.endsWith('.zip'));
 		console.log("Mods in artifact:", modFiles);
-		const validModFiles = modFiles.filter(file => checkModVersionAgainstFactorioVersion(
-			file
-				.replace('clusterio_lib_', '')
-				.replace('.zip', ''),
-			factorioVersion
-		));
+		const validModFiles = [];
+		for (const file of modFiles) {
+			if (await modMatchesFactorioVersion(path.join(extractDir, file), factorioVersion)) {
+				validModFiles.push(file);
+			}
+		}
 
 		if (validModFiles.length === 0) {
 			throw new Error('Could not find clusterio_lib mod file in downloaded artifact');
@@ -259,20 +259,17 @@ const findModFile = async () => {
 
 	return path.join(distDir, modFile);
 };
-const checkModVersionAgainstFactorioVersion = (modVersion, factorioVersion) => {
-	const modVersionParts = modVersion.split('.');
-	const factorioVersionParts = factorioVersion.split('.');
-
-	switch (modVersionParts[2]) {
-		case '20':
-			return factorioVersionParts[0] === '2';
-		case '11':
-			return factorioVersionParts[0] === '1' && factorioVersionParts[1] === '1';
-		case ('10', '18'):
-			return factorioVersionParts[0] === '1' && factorioVersionParts[1] === '0';
-		case '17':
-			return factorioVersionParts[0] === '0' && factorioVersionParts[1] === '17';
-		default:
-			return false;
+const modMatchesFactorioVersion = async (modZipPath, factorioVersion) => {
+	const zip = await Open.file(modZipPath);
+	const infoEntry = zip.files.find(entry => /^[^/]+\/info\.json$/.test(entry.path));
+	if (!infoEntry) {
+		return false;
 	}
+	const info = JSON.parse((await infoEntry.buffer()).toString());
+	let majorMinor = factorioVersion.split('.').slice(0, 2).join('.');
+	// Factorio 1.0 loads mods made for 0.18
+	if (majorMinor === '1.0') {
+		majorMinor = '0.18';
+	}
+	return info.factorio_version === majorMinor;
 };
