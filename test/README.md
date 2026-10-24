@@ -5,7 +5,7 @@ This directory contains integration tests for the Subspace Storage mod. These te
 ## Test Files
 
 - `integration.test.js`: Basic test that verifies the mod loads correctly
-- `lua_commands_test.js`: Tests that verify the Lua commands interact with the game correctly
+- `lua_commands.test.js`: Tests that verify the Lua commands interact with the game correctly
 
 ## Running the Tests
 
@@ -15,7 +15,8 @@ The tests use the following environment variables:
 
 - `FACTORIO_VERSION`: The version of Factorio to test with (optional, defaults to 1.1.110)
 - `MOD_VERSION`: The version of the mod to test with (optional)
-- `GITHUB_TOKEN`: The GitHub token to use for downloading clusterio_lib from GitHub Actions (required for CI)
+
+The tests download `clusterio_lib` from the public assets of Clusterio release `v2.0.2`; no GitHub or Factorio token is required. The Factorio-to-library version mapping is pinned in `setupModDirectory.js`.
 
 ### Running the Basic Integration Test
 
@@ -28,7 +29,7 @@ This test verifies that the mod loads correctly without any errors.
 ### Running the Lua Commands Test
 
 ```bash
-node lua_commands_test.js
+node lua_commands.test.js
 ```
 
 This test verifies that the Lua commands interact with the game correctly.
@@ -47,7 +48,7 @@ The tests work by:
 
 To add a new test:
 
-1. Create a new Lua script in the `createTestScripts` function in `lua_commands_test.js`
+1. Create a new Lua script in the `createTestScripts` function in `lua_commands.test.js`
 2. The script should use `game.print("SUCCESS: ...")` to indicate success and `game.print("ERROR: ...")` to indicate failure
 3. The test runner will count the number of successes and errors to determine if the test passed
 

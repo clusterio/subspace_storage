@@ -8,10 +8,9 @@ const { downloadFactorio } = require('./downloadFactorio');
 const { setupModDirectory } = require('./setupModDirectory');
 
 /*
-Required environment variables:
+Optional environment variables:
 - FACTORIO_VERSION: The version of Factorio to test with (optional, defaults to 1.1.110)
 - MOD_VERSION: The version of the mod to test with (optional)
-- GITHUB_TOKEN: The GitHub token to use for downloading clusterio_lib from GitHub Actions
 */
 
 const runFactorio = async (factorioDir) => {

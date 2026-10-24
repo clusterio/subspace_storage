@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.3.21
+Date: 24. 10. 2026
+  Features:
+    - Updated to Factorio 2.1.
+  Bugfixes:
+    - Fixed the inventory combinator not outputting the instance ID signal on Factorio 2.0 and later.
+---------------------------------------------------------------------------------------------------
 Version: 2.2.20
 Date: 15. 03. 2025
   Bugfixes:

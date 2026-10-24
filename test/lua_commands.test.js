@@ -11,10 +11,9 @@ const { downloadFactorio } = require('./downloadFactorio');
 const { setupModDirectory } = require('./setupModDirectory');
 
 /*
-Required environment variables:
+Optional environment variables:
 - FACTORIO_VERSION: The version of Factorio to test with (optional, defaults to 1.1.110)
 - MOD_VERSION: The version of the mod to test with (optional)
-- GITHUB_TOKEN: The GitHub token to use for downloading clusterio_lib from GitHub Actions
 */
 
 const FACTORIO_VERSION = process.env.FACTORIO_VERSION || "1.1.110";
@@ -82,6 +81,68 @@ const createTestScripts = async (tempDir) => {
 			
 			if success then
 				rcon.print("SUCCESS: Inventory combinator test passed")
+			end
+		`],
+		test_fluid_injector: [`
+			local injector = game.get_surface(1).create_entity{
+				name = "subspace-fluid-injector",
+				position = {x = 20, y = 0},
+				force = game.forces.player,
+				raise_built = true
+			}
+			injector.insert_fluid{name = "water", amount = 1000}
+
+			global.inputList = {}
+			HandleInputTank({entity = injector})
+
+			local exported = global.inputList.water and global.inputList.water.normal
+			local left = injector.get_fluid_count("water")
+			if exported ~= 999 or left ~= 1 then
+				rcon.print(string.format("ERROR: Expected 999 water exported and 1 left, got %s exported and %s left", tostring(exported), tostring(left)))
+			else
+				rcon.print("SUCCESS: Fluid injector test passed")
+			end
+		`],
+		test_fluid_extractor: [`
+			local extractor = game.get_surface(1).create_entity{
+				name = "subspace-fluid-extractor",
+				position = {x = 40, y = 0},
+				force = game.forces.player,
+				raise_built = true
+			}
+			extractor.set_recipe("get-water")
+
+			local requests = {}
+			GetOutputTankRequest(requests, {entity = extractor})
+			local requested = requests.water and requests.water.normal and requests.water.normal.requestedAmount
+
+			OutputTankInputMethod({storage = extractor}, "water", 100)
+			local filled = extractor.get_fluid_count("water")
+			if not requested or requested <= 0 or filled ~= 100 then
+				rcon.print(string.format("ERROR: Expected a water request and 100 water inserted, got %s requested and %s inserted", tostring(requested), tostring(filled)))
+			else
+				rcon.print("SUCCESS: Fluid extractor test passed")
+			end
+		`],
+		test_instance_id_signal: [`
+			--[[ Stand in for the clusterio_api interface the Clusterio save patch adds ]]
+			remote.add_interface("clusterio_api", {get_instance_id = function() return 42 end})
+			UpdateInvData('[["iron-plate",100,"normal"]]', true)
+			remote.remove_interface("clusterio_api")
+
+			local control = global._test_combinator.get_control_behavior()
+			local name, count
+			if ${FACTORIO_VERSION.split(".")[0]} < 2 then
+				local param = control.get_signal(1)
+				name, count = param.signal and param.signal.name, param.count
+			else
+				local filter = control.get_section(1).filters[1]
+				name, count = filter.value and filter.value.name, filter.min
+			end
+			if name ~= "signal-localid" or count ~= 42 then
+				rcon.print(string.format("ERROR: Expected signal-localid 42 in the first slot, got %s %s", tostring(name), tostring(count)))
+			else
+				rcon.print("SUCCESS: Instance id signal test passed")
 			end
 		`],
 	};
