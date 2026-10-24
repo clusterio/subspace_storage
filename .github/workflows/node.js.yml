@@ -6,7 +6,7 @@ name: Node.js CI
 on:
   push:
   pull_request:
-    types: [opened]
+    types: [opened, synchronize, reopened]
 
 # Define permissions needed for the GITHUB_TOKEN
 permissions:
@@ -68,7 +68,6 @@ jobs:
       - name: Run integration test
         env:
           FACTORIO_VERSION: ${{ matrix.factorio-version }}
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         run: npm test
 
   # A v<major>.<minor> tag (e.g. v2.3) uploads every variant in src/info.json to the mod portal. All variants share the
