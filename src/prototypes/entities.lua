@@ -25,7 +25,13 @@ local storage_tank = data.raw["storage-tank"]["storage-tank"]
 local connector_definition = { variation = 25, main_offset = {1.875, 1}, shadow_offset = {4.5, 2.5625} }
 
 local interactor_circuit_connector_1_way
-if compat.version_ge(2, 0) then
+if compat.version_ge(2, 1) then
+	-- Containers take one connector per direction since 2.1
+	interactor_circuit_connector_1_way = circuit_connector_definitions.create_vector(
+		universal_connector_template,
+		{ connector_definition }
+	)
+elseif compat.version_ge(2, 0) then
 	interactor_circuit_connector_1_way = circuit_connector_definitions.create_single(
 		universal_connector_template,
 		connector_definition

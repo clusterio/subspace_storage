@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        factorio-version: ['0.17.79', '1.0.0', '1.1.110', '2.0.39']
+        factorio-version: ['0.17.79', '1.0.0', '1.1.110', '2.0.39', '2.1.23']
       fail-fast: false
 
     steps:

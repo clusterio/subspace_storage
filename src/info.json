@@ -20,6 +20,11 @@
             "version": "2.2.20",
             "factorio_version": "2.0",
             "additional_files": { "lib_compat.lua": ["compat", "factorio_2.0.lua"] }
+        },
+        {
+            "version": "2.2.21",
+            "factorio_version": "2.1",
+            "additional_files": { "lib_compat.lua": ["compat", "factorio_2.1.lua"] }
         }
     ],
     "title": "Subspace Storage (Alpha)",

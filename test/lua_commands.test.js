@@ -84,6 +84,54 @@ const createTestScripts = async (tempDir) => {
 				rcon.print("SUCCESS: Inventory combinator test passed")
 			end
 		`],
+		test_fluid_injector: [`
+			local injector = game.get_surface(1).create_entity{
+				name = "subspace-fluid-injector",
+				position = {x = 20, y = 0},
+				force = game.forces.player,
+				raise_built = true
+			}
+			if not injector then
+				rcon.print("ERROR: Failed to create fluid injector")
+				return
+			end
+			global.inputList = {}
+			SetFluid(injector, { name = "water", amount = 100 })
+			HandleInputTank({ entity = injector })
+			local taken = global.inputList.water and global.inputList.water.normal
+			if taken ~= 99 then
+				rcon.print("ERROR: Expected 99 water taken, got " .. tostring(taken))
+			else
+				rcon.print("SUCCESS: Fluid injector test passed")
+			end
+		`],
+		test_fluid_extractor: [`
+			local extractor = game.get_surface(1).create_entity{
+				name = "subspace-fluid-extractor",
+				position = {x = 40, y = 0},
+				force = game.forces.player,
+				raise_built = true
+			}
+			if not extractor then
+				rcon.print("ERROR: Failed to create fluid extractor")
+				return
+			end
+			extractor.set_recipe("get-water")
+			local requests = {}
+			GetOutputTankRequest(requests, { entity = extractor })
+			local request = requests.water and requests.water.normal
+			if not request or request.requestedAmount <= 0 then
+				rcon.print("ERROR: Fluid extractor did not request water")
+				return
+			end
+			OutputTankInputMethod(request.requesters[1], "water", 50)
+			local fluid = GetFluid(extractor)
+			if not fluid or fluid.name ~= "water" or fluid.amount ~= 50 then
+				rcon.print("ERROR: Expected 50 water in extractor, got " .. (fluid and fluid.amount or 0))
+			else
+				rcon.print("SUCCESS: Fluid extractor test passed")
+			end
+		`],
 	};
 
 	return tests;
