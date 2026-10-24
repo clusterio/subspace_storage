@@ -17,18 +17,18 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: pnpm/action-setup@v4
+    - uses: actions/checkout@v7
+    - uses: pnpm/action-setup@v6
       with:
-        version: 8
-    - uses: actions/setup-node@v4
+        version: 10
+    - uses: actions/setup-node@v7
       with:
         node-version: 22.x
     - run: pnpm i --no-frozen-lockfile
     - run: node build.js
     # Upload build to artifacts
     - name: Upload build to artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: subspace_storage
         path: ./dist
@@ -39,15 +39,15 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        factorio-version: ['0.17.79', '1.0.0', '1.1.110', '2.0.39']
+        factorio-version: ['0.17.79', '1.0.0', '1.1.110', '2.0.77', '2.1.23']
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with:
-          version: 8
-      - uses: actions/setup-node@v4
+          version: 10
+      - uses: actions/setup-node@v7
         with:
           node-version: 22.x
 
@@ -57,7 +57,7 @@ jobs:
 
       # Download the built artifacts
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: subspace_storage
           path: ./dist
@@ -70,3 +70,45 @@ jobs:
           FACTORIO_VERSION: ${{ matrix.factorio-version }}
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         run: npm test
+
+  # A v<major>.<minor> tag (e.g. v2.3) uploads every variant in src/info.json to the mod portal. All variants share the
+  # tag's major.minor and differ in the patch, which encodes the Factorio version (17, 10, 11, 20, 21).
+  release:
+    name: Release to the mod portal
+    needs: [build, test]
+    if: github.event_name == 'push' && github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - uses: actions/checkout@v7
+    - name: Download build artifacts
+      uses: actions/download-artifact@v8
+      with:
+        name: subspace_storage
+        path: ./dist
+    - name: The tag matches every variant's version
+      run: |
+        for version in $(jq -r '.variants[].version' src/info.json); do
+          case "$version" in
+            "${GITHUB_REF_NAME#v}".*) ;;
+            *) echo "tag $GITHUB_REF_NAME, variant $version"; exit 1 ;;
+          esac
+          test -f "dist/subspace_storage_$version.zip"
+        done
+    # Skips a version already out, so a release that failed halfway can be re-run.
+    - name: Upload the mod to the mod portal
+      env:
+        FACTORIO_MOD_TOKEN: ${{ secrets.FACTORIO_MOD_TOKEN }}
+      run: |
+        released=$(curl -sS --fail-with-body https://mods.factorio.com/api/mods/subspace_storage | jq -r '.releases[].version')
+        for version in $(jq -r '.variants[].version' src/info.json); do
+          if grep -qxF "$version" <<< "$released"; then
+            echo "the mod portal has $version"
+            continue
+          fi
+          url=$(curl -sS --fail-with-body -X POST https://mods.factorio.com/api/v2/mods/releases/init_upload \
+            -H "Authorization: Bearer $FACTORIO_MOD_TOKEN" -F mod=subspace_storage | jq -er .upload_url)
+          curl -sS --fail-with-body -X POST "$url" -F "file=@dist/subspace_storage_$version.zip" | tee /dev/stderr | jq -e .success
+        done

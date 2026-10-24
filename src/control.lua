@@ -7,6 +7,39 @@ local lib_compat = require("__clusterio_lib__/compat")
 
 local compat = require("lib_compat")
 
+-- 2.1 removed LuaEntity::fluidbox, fluids are accessed through the entity itself
+local hasEntityFluidMethods = lib_compat.version_ge("2.1.0")
+
+local function GetFluid(entity)
+	if hasEntityFluidMethods then
+		return entity.get_fluid(1)
+	end
+	return entity.fluidbox[1]
+end
+
+local function SetFluid(entity, fluid)
+	if hasEntityFluidMethods then
+		entity.set_fluid(1, fluid)
+	else
+		entity.fluidbox[1] = fluid
+	end
+end
+
+local function ClearFluid(entity)
+	if hasEntityFluidMethods then
+		entity.clear_fluid(1)
+	else
+		entity.fluidbox[1] = nil
+	end
+end
+
+local function GetFluidCapacity(entity)
+	if hasEntityFluidMethods then
+		return entity.get_fluid_capacity(1)
+	end
+	return entity.fluidbox.get_capacity(1)
+end
+
 
 -- Entities which are not allowed to be placed outside the restriction zone
 local restrictedEntities = {
@@ -136,16 +169,18 @@ function AddEntity(entity)
 		--add the chests to a lists if these chests so they can be interated over
 		table.insert(global.inputTanksData.entitiesData, {
 			entity = entity,
-			fluidbox = entity.fluidbox
 		})
 	elseif entity.name == "subspace-fluid-extractor" then
 		--add the chests to a lists if these chests so they can be interated over
 		table.insert(global.outputTanksData.entitiesData, {
 			entity = entity,
-			fluidbox = entity.fluidbox
 		})
 		--previous version made then inactive which isn't desired anymore
-		entity.active = true
+		if lib_compat.version_ge("2.1.0") then
+			entity.disabled_by_script = false
+		else
+			entity.active = true
+		end
 	elseif entity.name == INV_COMBINATOR_NAME then
 		global.invControls[entity.unit_number] = entity.get_or_create_control_behavior()
 		entity.operable=false
@@ -593,17 +628,16 @@ end
 
 function HandleInputTank(entityData)
 	local entity  = entityData.entity
-	local fluidbox = entityData.fluidbox
 	if entity.valid then
 		--get the content of the chest
-		local fluid = fluidbox[1]
+		local fluid = GetFluid(entity)
 		if fluid ~= nil and fluid.amount > 0 then
 			if isFluidLegal(fluid.name) then
 				if fluid.amount > 1 then
 					local fluid_taken = math.ceil(fluid.amount) - 1
 					AddItemToInputList(fluid.name, fluid_taken, "normal")
 					fluid.amount = fluid.amount - fluid_taken
-					fluidbox[1] = fluid
+					SetFluid(entity, fluid)
 				else
 					local signal
 					if lib_compat.version_ge("2.0.0") then
@@ -616,7 +650,7 @@ function HandleInputTank(entityData)
 						signal = entity.get_merged_signal({name="signal-P",type="virtual"})
 					end
 					if signal == 1 then
-						fluidbox[1] = nil
+						ClearFluid(entity)
 					end
 				end
 			end
@@ -694,7 +728,6 @@ end
 
 function GetOutputTankRequest(requests, entityData)
 	local entity = entityData.entity
-	local fluidbox = entityData.fluidbox
 	--The type of fluid the tank should output
 	--is determined by the recipe set in the  entity.
 	--If no recipe is set then it shouldn't output anything
@@ -709,7 +742,7 @@ function GetOutputTankRequest(requests, entityData)
 		--Some fluids may be illegal. If that's the case then don't process them
 		if isFluidLegal(fluidName) then
 			--Either get the current fluid or reset it to the requested fluid
-			local fluid = fluidbox[1] or {name = fluidName, amount = 0}
+			local fluid = GetFluid(entity) or {name = fluidName, amount = 0}
 
 			--If the current fluid isn't the correct fluid
 			--then remove that fluid
@@ -717,11 +750,10 @@ function GetOutputTankRequest(requests, entityData)
 				fluid = {name = fluidName, amount = 0}
 			end
 
-			local missingFluid = math.max(math.ceil(fluidbox.get_capacity(1) - fluid.amount), 0)
+			local missingFluid = math.max(math.ceil(GetFluidCapacity(entity) - fluid.amount), 0)
 			--If the entity is missing fluid than add a request for fluid
 			if missingFluid > 0 then
-				local entry = AddRequestToTable(requests, fluidName, missingFluid, entity)
-				entry.fluidbox = fluidbox
+				AddRequestToTable(requests, fluidName, missingFluid, entity)
 			end
 		end
 	end
@@ -757,7 +789,7 @@ end
 
 function OutputTankInputMethod(request, fluidName, evenShareOfFluid)
 	if request.storage.valid then
-		local fluid = request.fluidbox[1] or {name = fluidName, amount = 0}
+		local fluid = GetFluid(request.storage) or {name = fluidName, amount = 0}
 		fluid.amount = fluid.amount + evenShareOfFluid
 
 		--Need to set steams heat because otherwise it's too low
@@ -765,7 +797,7 @@ function OutputTankInputMethod(request, fluidName, evenShareOfFluid)
 			fluid.temperature = 165
 		end
 
-		request.fluidbox[1] = fluid
+		SetFluid(request.storage, fluid)
 		return evenShareOfFluid
 	else
 		return 0
@@ -979,7 +1011,11 @@ function UpdateInvCombinators()
 		-- Clamp to 32-bit to avoid error raised by Factorio
 		instance_id = math.min(instance_id, 0x7fffffff)
 		instance_id = math.max(instance_id, -0x80000000)
-		table.insert(invframe,{count=instance_id,index=#invframe+1,signal={name="signal-localid",type="virtual"}})
+		if lib_compat.version_ge("2.0.0") then
+			invframe[#invframe+1] = {min=instance_id, value={type="virtual", name="signal-localid", quality="normal"}}
+		else
+			table.insert(invframe,{count=instance_id,index=#invframe+1,signal={name="signal-localid",type="virtual"}})
+		end
 	end
 
 	if global.invdata then

@@ -86,7 +86,11 @@ local function subspace_interactor_entity(options)
 	}
 
 	if options.circuit_connector then
-		if compat.version_ge(2, 0) then
+		local entity_type = options.entity_properties.type
+		if compat.version_ge(2, 1) and (entity_type == "container" or entity_type == "logistic-container") then
+			-- 2.1 containers take one circuit connector per direction
+			entity.circuit_connector = { options.circuit_connector }
+		elseif compat.version_ge(2, 0) then
 			entity.circuit_connector = options.circuit_connector
 		else
 			entity.circuit_wire_connection_points = options.circuit_connector.points

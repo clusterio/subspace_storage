@@ -41,12 +41,13 @@ exports.setupModDirectory = setupModDirectory;const downloadClusterioLib = async
 		throw new Error('GITHUB_TOKEN environment variable is required to download artifacts from GitHub Actions');
 	}
 
-	// First, get the latest workflow run ID
-	const getLatestRunId = async () => {
+	// Get recent successful runs of clusterio's Node.js CI on master. A run that only touched documentation skips the
+	// build job, so not every run has the clusterio_lib artifact.
+	const getRecentRunIds = async () => {
 		return new Promise((resolve, reject) => {
 			const options = {
 				hostname: 'api.github.com',
-				path: '/repos/clusterio/clusterio/actions/runs?status=success&per_page=1',
+				path: '/repos/clusterio/clusterio/actions/workflows/node.js.yml/runs?status=success&branch=master&per_page=20',
 				method: 'GET',
 				headers: {
 					'User-Agent': 'subspace-storage-integration-test',
@@ -75,7 +76,7 @@ exports.setupModDirectory = setupModDirectory;const downloadClusterioLib = async
 							return;
 						}
 
-						resolve(response.workflow_runs[0].id);
+						resolve(response.workflow_runs.map(run => run.id));
 					} catch (error) {
 						reject(error);
 					}
@@ -116,13 +117,8 @@ exports.setupModDirectory = setupModDirectory;const downloadClusterioLib = async
 
 					try {
 						const response = JSON.parse(data);
-						const artifact = response.artifacts.find(a => a.name === 'clusterio_lib');
-						if (!artifact) {
-							reject(new Error('No clusterio_lib artifact found'));
-							return;
-						}
-
-						resolve(artifact.id);
+						const artifact = response.artifacts.find(a => a.name === 'clusterio_lib' && !a.expired);
+						resolve(artifact ? artifact.id : null);
 					} catch (error) {
 						reject(error);
 					}
@@ -175,13 +171,18 @@ exports.setupModDirectory = setupModDirectory;const downloadClusterioLib = async
 	};
 
 	try {
-		// Step 1: Get the latest workflow run ID
-		const runId = await getLatestRunId();
-		console.log(`Found latest successful workflow run: ${runId}`);
-
-		// Step 2: Get the artifact ID
-		const artifactId = await getArtifactId(runId);
-		console.log(`Found clusterio_lib artifact: ${artifactId}`);
+		// Step 1 and 2: Find the most recent successful run with a clusterio_lib artifact
+		let artifactId = null;
+		for (const runId of await getRecentRunIds()) {
+			artifactId = await getArtifactId(runId);
+			if (artifactId) {
+				console.log(`Found clusterio_lib artifact ${artifactId} in workflow run ${runId}`);
+				break;
+			}
+		}
+		if (!artifactId) {
+			throw new Error('No clusterio_lib artifact found in recent workflow runs');
+		}
 
 		// Step 3: Download the artifact
 		const artifactZipPath = await downloadArtifact(artifactId);
@@ -261,17 +262,20 @@ const findModFile = async () => {
 };
 const checkModVersionAgainstFactorioVersion = (modVersion, factorioVersion) => {
 	const modVersionParts = modVersion.split('.');
-	const factorioVersionParts = factorioVersion.split('.');
+	const [major, minor] = factorioVersion.split('.');
 
 	switch (modVersionParts[2]) {
+		case '21':
+			return major === '2' && minor === '1';
 		case '20':
-			return factorioVersionParts[0] === '2';
+			return major === '2' && minor === '0';
 		case '11':
-			return factorioVersionParts[0] === '1' && factorioVersionParts[1] === '1';
-		case ('10', '18'):
-			return factorioVersionParts[0] === '1' && factorioVersionParts[1] === '0';
+			return major === '1' && minor === '1';
+		case '10':
+		case '18':
+			return major === '1' && minor === '0';
 		case '17':
-			return factorioVersionParts[0] === '0' && factorioVersionParts[1] === '17';
+			return major === '0' && minor === '17';
 		default:
 			return false;
 	}
