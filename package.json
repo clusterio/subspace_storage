@@ -7,18 +7,16 @@
     "test": "node test/integration.test.js && node test/lua_commands.test.js"
   },
   "engines": {
-    "node": ">=10"
+    "node": ">=20.9"
   },
   "dependencies": {
     "fs-extra": "^11.3.0",
     "jszip": "^3.10.1",
     "klaw": "^4.1.0",
-    "sharp": "^0.33.5",
-    "unzipper": "^0.10.14",
+    "sharp": "^0.35.4",
     "yargs": "^17.7.2"
   },
   "devDependencies": {
-    "rcon-client": "^4.2.5",
-    "tar": "^6.2.0"
+    "rcon-client": "^4.2.5"
   }
 }
